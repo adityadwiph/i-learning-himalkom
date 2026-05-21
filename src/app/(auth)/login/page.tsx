@@ -2,6 +2,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase/client'
+import Link from 'next/link'
 
 const COMMUNITIES = ['AgriUX','IWDC','CSI','CP','Gaming','Gary','MAD']
 
@@ -230,7 +231,9 @@ async function handleRegister(e: React.FormEvent) {
                 </div>
               </div>
               <div style={{ textAlign:'right', marginBottom:24 }}>
-                <span style={{ fontSize:11, color:'var(--cyan)', cursor:'pointer' }}>Lupa password?</span>
+                <Link href="/lupa-password" style={{ fontSize:11, color:'var(--cyan)', textDecoration:'none' }}>
+                  Lupa password?
+                </Link>
               </div>
 
               {loginErr && <div style={{ ...errBox, marginBottom:12 }}>{loginErr}</div>}
