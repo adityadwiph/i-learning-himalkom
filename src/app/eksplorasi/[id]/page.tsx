@@ -49,17 +49,24 @@ export default function SpesialisasiPage() {
     setLoading(false)
   }
 
-  async function pilih(lpId: string) {
-    setJoining(true)
-    const { data:{ user } } = await supabase.auth.getUser()
-    if (!user) return
-    await Promise.all([
-      supabase.from('komunitas_member').upsert({ id_user:user.id, id_komunitas:id }),
-      supabase.from('user_learningpath').upsert({ user_id:user.id, LearningPath_id:lpId }),
-    ])
-    setJoining(false)
-    router.push(`/learning-path/${lpId}`)
-  }
+async function pilih(lpId: string) {
+  setJoining(true)
+  const { data:{ user } } = await supabase.auth.getUser()
+  if (!user) return
+
+  await Promise.all([
+    supabase.from('komunitas_member').upsert(
+      { id_user: user.id, id_komunitas: id },
+      { onConflict: 'id_user,id_komunitas', ignoreDuplicates: true }
+    ),
+    supabase.from('user_learningpath').upsert(
+      { user_id: user.id, LearningPath_id: lpId },
+      { onConflict: 'user_id,LearningPath_id', ignoreDuplicates: true }
+    ),
+  ])
+  setJoining(false)
+  router.push(`/learning-path/${lpId}`)
+}
 
   const name = kom?.nama_komunitas||''
   const icon = KOM_ICON[name]||'📚'

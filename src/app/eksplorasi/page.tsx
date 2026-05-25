@@ -20,12 +20,13 @@ const KOM_COLOR: Record<string,string> = {
 
 export default function EksplorasiPage() {
   const router = useRouter()
-  const [profile, setProfile]   = useState<Profile|null>(null)
-  const [nim,     setNim]       = useState('')
-  const [list,    setList]      = useState<Komunitas[]>([])
-  const [joined,  setJoined]    = useState<string[]>([])
-  const [search,  setSearch]    = useState('')
-  const [loading, setLoading]   = useState(true)
+  const [profile, setProfile] = useState<Profile|null>(null)
+  const [nim,     setNim]     = useState('')
+  const [list,    setList]    = useState<Komunitas[]>([])
+  const [joined,  setJoined]  = useState<string[]>([])
+  const [search,  setSearch]  = useState('')
+  const [loading, setLoading] = useState(true)
+  const [stats,   setStats]   = useState({ komunitas: 0, member: 0, peminatan: 0, materi: 0 })
 
   useEffect(()=>{ init() }, [])
 
@@ -41,6 +42,20 @@ export default function EksplorasiPage() {
     setProfile(prof)
     setList(kom || [])
     setJoined((mem||[]).map((m:{ id_komunitas:string })=>m.id_komunitas))
+
+    // Stats real dari database
+    const [{ count: cMember }, { count: cPeminatan }, { count: cMateri }] = await Promise.all([
+      supabase.from('profiles').select('*', { count: 'exact', head: true }),
+      supabase.from('learningpath').select('*', { count: 'exact', head: true }),
+      supabase.from('roadmapnode').select('*', { count: 'exact', head: true }),
+    ])
+    setStats({
+      komunitas: kom?.length || 0,
+      member:    cMember    || 0,
+      peminatan: cPeminatan || 0,
+      materi:    cMateri    || 0,
+    })
+
     setLoading(false)
   }
 
@@ -89,19 +104,21 @@ export default function EksplorasiPage() {
         {/* Stats */}
         <div className="fade-up d1" style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:12, marginBottom:52 }}>
           {[
-            { n: list.length||7, label:'Komunitas Aktif' },
-            { n: 360,            label:'Total Member' },
-            { n: 15,             label:'Pilihan Peminatan' },
-            { n: 50,             label:'Pilihan Materi' },
+            { n: stats.komunitas, label:'Komunitas Aktif' },
+            { n: stats.member,    label:'Total Member' },
+            { n: stats.peminatan, label:'Pilihan Peminatan' },
+            { n: stats.materi,    label:'Pilihan Materi' },
           ].map(s=>(
             <div key={s.label} className="card" style={{ padding:'18px 20px', textAlign:'center' }}>
-              <div style={{ fontFamily:'var(--font-d)', fontSize:34, fontWeight:900, color:'var(--cyan)' }}>{s.n}</div>
+              <div style={{ fontFamily:'var(--font-d)', fontSize:34, fontWeight:900, color:'var(--cyan)' }}>
+                {loading ? '...' : s.n}
+              </div>
               <div style={{ fontSize:11, color:'var(--muted)', marginTop:5 }}>{s.label}</div>
             </div>
           ))}
         </div>
 
-        {/* Grid */}
+        {/* Grid komunitas */}
         {loading ? (
           <div style={{ display:'grid', gridTemplateColumns:'repeat(2,1fr)', gap:14 }}>
             {[1,2,3,4].map(i=>(
@@ -111,9 +128,9 @@ export default function EksplorasiPage() {
         ) : (
           <div className="fade-up d2" style={{ display:'grid', gridTemplateColumns:'repeat(2,1fr)', gap:14 }}>
             {filtered.map((k,i)=>{
-              const name  = k.nama_komunitas||''
-              const icon  = KOM_ICON[name]||KOM_ICON[name.toUpperCase()]||'📚'
-              const color = KOM_COLOR[name]||KOM_COLOR[name.toUpperCase()]||'var(--cyan)'
+              const name     = k.nama_komunitas||''
+              const icon     = KOM_ICON[name]||KOM_ICON[name.toUpperCase()]||'📚'
+              const color    = KOM_COLOR[name]||KOM_COLOR[name.toUpperCase()]||'var(--cyan)'
               const isJoined = joined.includes(k.id)
               return (
                 <div key={k.id} className="card fade-up" style={{ padding:24, animationDelay:`${i*.07}s` }}>
