@@ -6,7 +6,7 @@ import { supabase } from '@/lib/supabase/client'
 import Navbar from '@/components/ui/navbar'
 
 interface Komunitas { id: string; nama_komunitas: string; deskripsi_komunitas: string }
-interface Profile   { username: string; role: string }
+interface Profile { username: string; role: string; nim: string }
 
 const KOM_ICON: Record<string,string> = {
   CSI:'🛡', IWDC:'🌐', AgriUX:'🎨', 'AGRI-UX':'🎨',
@@ -35,7 +35,7 @@ export default function EksplorasiPage() {
     if (!user) { router.push('/login'); return }
 
     const [{ data:prof }, { data:kom }, { data:mem }] = await Promise.all([
-      supabase.from('profiles').select('username,role').eq('id', user.id).single(),
+      supabase.from('profiles').select('username,role,nim').eq('id', user.id).single(),
       supabase.from('komunitas').select('*').order('nama_komunitas'),
       supabase.from('komunitas_member').select('id_komunitas').eq('id_user', user.id),
     ])
@@ -66,7 +66,7 @@ export default function EksplorasiPage() {
 
   return (
     <div style={{ minHeight:'100vh', background:'var(--bg)' }}>
-      <Navbar username={profile?.username} nim={nim}/>
+      <Navbar username={profile?.username || ''} nim={profile?.nim || ''} />
 
       <main style={{ maxWidth:1080, margin:'0 auto', padding:'52px 24px 80px' }}>
 

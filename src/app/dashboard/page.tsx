@@ -42,7 +42,6 @@ export default function DashboardPage() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { router.push('/login'); return }
 
-    // Load data paralel
     const [{ data: prof }, { data: ulp }, { data: prog }, { data: km }] = await Promise.all([
       supabase.from('profiles').select('username, nim').eq('id', user.id).single(),
       supabase.from('user_learningpath')
@@ -58,16 +57,15 @@ export default function DashboardPage() {
         .eq('id_user', user.id),
     ])
 
+    // Set profile dulu agar navbar langsung dapat data
     setProfile(prof)
 
-    // Aktivitas terbaru
     setRecent((prog || []).map((p: any) => ({
       judul: p.roadmapnode?.judul || 'Materi',
       status: p.status,
       updated_at: p.updated_at,
     })))
 
-    // Ambil nama komunitas secara terpisah
     const komIds = (km || []).map((k: any) => k.id_komunitas)
     const { data: komData } = komIds.length
       ? await supabase.from('komunitas').select('id, nama_komunitas').in('id', komIds)
@@ -79,7 +77,6 @@ export default function DashboardPage() {
     }))
     setJoinedKom(komList)
 
-    // Learning path + progress per path
     const paths: EnrolledLP[] = await Promise.all(
       (ulp || []).map(async (u: any) => {
         const lpId   = u.LearningPath_id
@@ -95,7 +92,6 @@ export default function DashboardPage() {
               .eq('user_id', user.id).eq('status', 'selesai').in('roadmapnode_id', ids)
           : { data: [] }
 
-        // Cari nama komunitas untuk path ini
         const { data: klp } = await supabase
           .from('komunitas_learningpath')
           .select('komunitas_id')
@@ -119,9 +115,10 @@ export default function DashboardPage() {
 
   const pct = stats.total > 0 ? Math.round((stats.done / stats.total) * 100) : 0
 
+  // Loading state — tetap kirim profile ke Navbar
   if (loading) return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
-      <Navbar />
+      <Navbar username={profile?.username || ''} nim={profile?.nim || ''} />
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh', color: 'var(--muted)', fontSize: 14 }}>
         Memuat dashboard...
       </div>
@@ -130,7 +127,7 @@ export default function DashboardPage() {
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
-      <Navbar username={profile?.username} nim={profile?.nim || ''} />
+      <Navbar username={profile?.username || ''} nim={profile?.nim || ''} />
 
       <main style={{ maxWidth: 1000, margin: '0 auto', padding: '44px 24px 80px' }}>
 
@@ -152,8 +149,8 @@ export default function DashboardPage() {
         {/* Stats */}
         <div className="fade-up d1" style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 14, marginBottom: 36 }}>
           {[
-            { label: 'Total Progress',  val: `${pct}%`,           sub: `${stats.done} dari ${stats.total} node`, bar: pct,                      color: 'var(--cyan)'  },
-            { label: 'Node Selesai',    val: `${stats.done}`,      sub: 'node berhasil diselesaikan',             bar: pct,                      color: 'var(--green)' },
+            { label: 'Total Progress',  val: `${pct}%`,           sub: `${stats.done} dari ${stats.total} node`, bar: pct,                         color: 'var(--cyan)'  },
+            { label: 'Node Selesai',    val: `${stats.done}`,      sub: 'node berhasil diselesaikan',             bar: pct,                         color: 'var(--green)' },
             { label: 'Komunitas Aktif', val: `${stats.komunitas}`, sub: 'komunitas diikuti',                      bar: (stats.komunitas / 7) * 100, color: 'var(--amber)' },
           ].map(s => (
             <div key={s.label} className="card" style={{ padding: '20px 22px' }}>
