@@ -8,9 +8,17 @@ import Navbar from '@/components/ui/navbar'
 interface Komunitas { id: string; nama_komunitas: string; deskripsi_komunitas: string }
 interface Profile { username: string; role: string; nim: string }
 
-const KOM_ICON: Record<string,string> = {
-  CSI:'🛡', IWDC:'🌐', AgriUX:'🎨', 'AGRI-UX':'🎨',
-  Gaming:'🎮', DAMING:'🎮', Gary:'⚡', GARY:'⚡', MAD:'🤖', CP:'{}',
+const KOM_ICON: Record<string, React.ReactNode> = {
+  CSI: <img src="/images/csi.png" alt="CSI Logo" style={{ width: '24px', height: '24px' }} />,
+  IWDC:<img src="/images/iwdc.png" alt="iwdc Logo" style={{ width: '24px', height: '24px' }} />,
+  AgriUX: <img src="/images/agriux.png" alt="agriux Logo" style={{ width: '24px', height: '24px' }} />,
+  'AGRI-UX': <img src="/images/agriux.png" alt="agriux Logo" style={{ width: '24px', height: '24px' }} />,
+  DAMING : <img src="/images/daming.png" alt="DAMING Logo" style={{ width: '24px', height: '24px' }} />,
+  DAMING: <img src="/images/daming.png" alt="DAMING Logo" style={{ width: '24px', height: '24px' }} />,
+  Gary: <img src="/images/gary.png" alt="gary Logo" style={{ width: '24px', height: '24px' }} />,
+  GARY: <img src="/images/gary.png" alt="gary Logo" style={{ width: '24px', height: '24px' }} />,
+  MAD: <img src="/images/MAD.png" alt="MAD Logo" style={{ width: '24px', height: '24px' }} />,
+  CP: <img src="/images/cp.png" alt="cp Logo" style={{ width: '24px', height: '24px' }} />,
 }
 const KOM_COLOR: Record<string,string> = {
   CSI:'#00c8ff', IWDC:'#818cf8', AgriUX:'#f59e0b', 'AGRI-UX':'#f59e0b',
