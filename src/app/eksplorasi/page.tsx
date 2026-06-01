@@ -13,7 +13,6 @@ const KOM_ICON: Record<string, React.ReactNode> = {
   IWDC:<img src="/images/iwdc.png" alt="iwdc Logo" style={{ width: '24px', height: '24px' }} />,
   AgriUX: <img src="/images/agriux.png" alt="agriux Logo" style={{ width: '24px', height: '24px' }} />,
   'AGRI-UX': <img src="/images/agriux.png" alt="agriux Logo" style={{ width: '24px', height: '24px' }} />,
-  DAMING : <img src="/images/daming.png" alt="DAMING Logo" style={{ width: '24px', height: '24px' }} />,
   DAMING: <img src="/images/daming.png" alt="DAMING Logo" style={{ width: '24px', height: '24px' }} />,
   Gary: <img src="/images/gary.png" alt="gary Logo" style={{ width: '24px', height: '24px' }} />,
   GARY: <img src="/images/gary.png" alt="gary Logo" style={{ width: '24px', height: '24px' }} />,
