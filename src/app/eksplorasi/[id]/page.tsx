@@ -9,7 +9,7 @@ interface LP       { id: string; 'Nama Learning Path': string; deskripsi: string
 interface Komunitas{ id: string; nama_komunitas: string }
 interface Profile  { username: string }
 
-const KOM_ICON: Record<string,string> = {
+const KOM_ICON: Record<string, React.ReactNode> = {
   CSI: <img src="/images/csi.png" alt="csi Logo" style={{ width: '24px', height: '24px' }} />,
   IWDC: <img src="/images/iwdc.png" alt="iwdc Logo" style={{ width: '24px', height: '24px' }} />,
   AgriUX: <img src="/images/agriux.png" alt="agriux Logo" style={{ width: '24px', height: '24px' }} />,
