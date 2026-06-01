@@ -10,7 +10,13 @@ interface Komunitas{ id: string; nama_komunitas: string }
 interface Profile  { username: string }
 
 const KOM_ICON: Record<string,string> = {
-  CSI:'🛡', IWDC:'🌐', AgriUX:'🎨', Gaming:'🎮', Gary:'⚡', MAD:'🤖', CP:'{}',
+  CSI: <img src="/images/csi.png" alt="csi Logo" style={{ width: '24px', height: '24px' }} />,
+  IWDC: <img src="/images/iwdc.png" alt="iwdc Logo" style={{ width: '24px', height: '24px' }} />,
+  AgriUX: <img src="/images/agriux.png" alt="agriux Logo" style={{ width: '24px', height: '24px' }} />,
+  Gaming: <img src="/images/daming.png" alt="daming Logo" style={{ width: '24px', height: '24px' }} />,
+  Gary: <img src="/images/gary.png" alt="gary Logo" style={{ width: '24px', height: '24px' }} />,
+  MAD: <img src="/images/MAD.png" alt="MAD Logo" style={{ width: '24px', height: '24px' }} />,
+  CP: <img src="/images/cp.png" alt="cp Logo" style={{ width: '24px', height: '24px' }} />,
 }
 
 export default function SpesialisasiPage() {
