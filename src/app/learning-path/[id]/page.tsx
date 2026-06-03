@@ -16,6 +16,165 @@ const STATUS_BG     = { selesai:'rgba(0,230,118,.12)', aktif:'rgba(0,200,255,.12
 const STATUS_LABEL  = { selesai:'✓ Selesai', aktif:'▶ Aktif', terkunci:'🔒 Terkunci' }
 const LEVEL_LABELS  = ['Pemula','Intermediate','Advance','Capstone']
 
+// ── FAB bottom-sheet ────────────────────────────────────────────────────────
+function NodeFAB({
+  node,
+  onClose,
+  onMarkDone,
+  onLihatMateri,
+  marking,
+}: {
+  node: RNode | null
+  onClose: () => void
+  onMarkDone: (id: string) => void
+  onLihatMateri: (nodeId: string) => void
+  marking: string | null
+}) {
+  const [visible, setVisible] = useState(false)
+
+  useEffect(() => {
+    if (node) {
+      // tiny delay so the CSS transition fires after mount
+      const t = setTimeout(() => setVisible(true), 10)
+      return () => clearTimeout(t)
+    } else {
+      setVisible(false)
+    }
+  }, [node])
+
+  if (!node) return null
+
+  const color = STATUS_COLOR[node.status]
+  const isDone = node.status === 'selesai'
+  const isActive = node.status === 'aktif'
+
+  function handleClose() {
+    setVisible(false)
+    setTimeout(onClose, 280)
+  }
+
+  return (
+    <>
+      {/* Backdrop */}
+      <div
+        onClick={handleClose}
+        style={{
+          position: 'fixed', inset: 0, zIndex: 200,
+          background: 'rgba(0,0,0,.55)',
+          opacity: visible ? 1 : 0,
+          transition: 'opacity .25s ease',
+        }}
+      />
+
+      {/* Centered modal */}
+      <div
+        style={{
+          position: 'fixed', top: '50%', left: '50%', zIndex: 201,
+          width: '90%', maxWidth: 480,
+          background: 'var(--bg3)',
+          border: `1px solid ${color}40`,
+          borderTop: `2px solid ${color}`,
+          borderRadius: 16,
+          padding: '20px 24px 28px',
+          transform: visible
+            ? 'translate(-50%, -50%) scale(1)'
+            : 'translate(-50%, -50%) scale(0.92)',
+          opacity: visible ? 1 : 0,
+          transition: 'transform .28s cubic-bezier(.16,1,.3,1), opacity .22s ease',
+        }}
+      >
+        {/* Top row: status badge + close */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+          <div style={{
+            flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            gap: 8, padding: '8px 0', borderRadius: 10,
+            background: isDone ? 'rgba(0,230,118,.12)' : 'rgba(0,200,255,.12)',
+            border: `1px solid ${color}`,
+            fontSize: 14, fontWeight: 700, color,
+          }}>
+            {isDone ? '✓ Selesai' : '▶ Aktif'}
+          </div>
+          <button
+            onClick={handleClose}
+            style={{
+              width: 34, height: 34, flexShrink: 0,
+              background: 'transparent', border: '1px solid var(--border)',
+              borderRadius: 8, color: 'var(--muted)', fontSize: 16,
+              cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}
+          >✕</button>
+        </div>
+
+        {/* Title */}
+        <div style={{ fontSize: 20, fontWeight: 700, color: '#fff', marginBottom: 4 }}>
+          {node.judul}
+        </div>
+        <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 16 }}>
+          Modul {node.urutan}
+        </div>
+
+        {/* Study materials box */}
+        <div style={{
+          background: 'var(--bg4)', border: '1px solid var(--border-c)',
+          borderRadius: 10, padding: '12px 14px', marginBottom: 14,
+        }}>
+          <div style={{ fontSize: 10, letterSpacing: '1.5px', color: 'var(--muted)', marginBottom: 10 }}>
+            STUDY MATERIALS
+          </div>
+          {['Modul', 'Video'].map(item => (
+            <div key={item} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+              <div style={{
+                width: 14, height: 14, border: '1.5px solid var(--border)',
+                borderRadius: 3, flexShrink: 0,
+              }}/>
+              <span style={{ fontSize: 13, color: 'var(--muted)' }}>{item}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* Description */}
+        <p style={{ fontSize: 13, color: 'var(--muted)', lineHeight: 1.7, marginBottom: 18 }}>
+          Selesaikan modul ini untuk membuka materi berikutnya. Klik tombol di bawah setelah kamu mempelajari materinya.
+        </p>
+
+        {/* Action buttons */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+          <button
+            onClick={() => onLihatMateri(node.id)}
+            style={{
+              padding: '11px', borderRadius: 8,
+              background: 'transparent', border: `1px solid ${color}`,
+              fontSize: 13, fontWeight: 600, color, cursor: 'pointer',
+              fontFamily: 'var(--font-b)',
+            }}
+          >▶ Lihat Materi</button>
+
+          {isActive && (
+            <button
+              onClick={() => onMarkDone(node.id)}
+              disabled={marking === node.id}
+              className="btn-primary"
+              style={{ padding: '11px', fontSize: 13 }}
+            >
+              {marking === node.id ? 'Menyimpan...' : '✓ Tandai Selesai'}
+            </button>
+          )}
+
+          {isDone && (
+            <div style={{
+              padding: '11px', borderRadius: 8, textAlign: 'center',
+              fontSize: 13, fontWeight: 600,
+              background: 'rgba(0,230,118,.1)', border: '1px solid rgba(0,230,118,.3)',
+              color: 'var(--green)',
+            }}>✓ Sudah Selesai</div>
+          )}
+        </div>
+      </div>
+    </>
+  )
+}
+// ────────────────────────────────────────────────────────────────────────────
+
 export default function LearningPathPage() {
   const { id }   = useParams<{ id:string }>()
   const router   = useRouter()
@@ -24,7 +183,7 @@ export default function LearningPathPage() {
   const [lp,       setLp]       = useState<LP|null>(null)
   const [nodes,    setNodes]    = useState<RNode[]>([])
   const [userId,   setUserId]   = useState('')
-  const [openNode, setOpenNode] = useState<string|null>(null)
+  const [openNode, setOpenNode] = useState<RNode|null>(null)  // now stores the full node
   const [marking,  setMarking]  = useState<string|null>(null)
   const [loading,  setLoading]  = useState(true)
 
@@ -70,7 +229,6 @@ export default function LearningPathPage() {
   const total = nodes.length
   const pct   = total>0 ? Math.round((done/total)*100) : 0
 
-  // Group nodes by level (3 per row matching mockup)
   const chunkSize = 3
   const rows: RNode[][] = []
   for (let i=0; i<nodes.length; i+=chunkSize) rows.push(nodes.slice(i,i+chunkSize))
@@ -129,7 +287,7 @@ export default function LearningPathPage() {
           </div>
         </div>
 
-        {/* Roadmap grid — matches mockup layout */}
+        {/* Roadmap grid */}
         {nodes.length===0 ? (
           <div className="card" style={{ padding:60, textAlign:'center', color:'var(--muted)' }}>
             <div style={{ fontSize:32, marginBottom:12 }}>📭</div>
@@ -151,96 +309,57 @@ export default function LearningPathPage() {
                       border:'1px solid rgba(255,255,255,.15)', color:'var(--muted)',
                       background:'var(--bg3)', whiteSpace:'nowrap',
                     }}>{levelLabel}</div>
-                    {/* Connector dot */}
                     {rowIdx < rows.length-1 && (
                       <div style={{ width:1, height:24, background:'rgba(255,255,255,.08)', marginTop:4 }}/>
                     )}
                   </div>
 
-                  {/* Nodes in this row */}
+                  {/* Node cards */}
                   <div style={{ flex:1, display:'flex', gap:12, flexWrap:'wrap' }}>
                     {row.map((node)=>{
                       const color  = STATUS_COLOR[node.status]
                       const bg     = STATUS_BG[node.status]
-                      const isOpen = openNode===node.id
-                      const locked = node.status==='terkunci'
-                      return (
-                        <div key={node.id} style={{
-                          flex:'1 1 160px', minWidth:0,
-                          opacity: locked?.6:1,
-                        }}>
-                          {/* Node card */}
-                          <div
-                            onClick={()=>!locked && setOpenNode(isOpen?null:node.id)}
-                            style={{
-                              padding:'14px 16px', borderRadius:12, cursor:locked?'default':'pointer',
-                              border:`1px solid ${isOpen?color+'80':'rgba(255,255,255,.07)'}`,
-                              background: isOpen ? bg : 'var(--bg3)',
-                              transition:'all .2s',
-                              display:'flex', flexDirection:'column', gap:8,
-                            }}
-                          >
-                            {/* Status dot + title */}
-                            <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-                              <div style={{
-                                width:22, height:22, borderRadius:'50%', flexShrink:0,
-                                border:`2px solid ${color}`, background:bg,
-                                display:'flex', alignItems:'center', justifyContent:'center',
-                                boxShadow: node.status==='aktif'?`0 0 0 3px rgba(0,200,255,.12)`:'none',
-                                transition:'all .2s',
-                              }}>
-                                {node.status==='selesai' && <span style={{ fontSize:10, color:'var(--green)', fontWeight:700 }}>✓</span>}
-                                {node.status==='aktif'   && <div style={{ width:6, height:6, borderRadius:'50%', background:'var(--cyan)' }}/>}
-                              </div>
-                              <span style={{ fontSize:12, fontWeight:600, color: locked?'var(--muted)':'#fff', lineHeight:1.3 }}>
-                                {node.judul}
-                              </span>
-                            </div>
+                      const locked = node.status === 'terkunci'
+                      const isOpen = openNode?.id === node.id
 
-                            <div style={{ display:'flex', alignItems:'center', gap:6 }}>
-                              <span style={{ fontSize:10, color:'var(--muted)' }}>Modul {node.urutan}</span>
-                              <span style={{
-                                fontSize:10, padding:'2px 8px', borderRadius:20,
-                                background:`${color}18`, color, border:`1px solid ${color}30`,
-                              }}>{STATUS_LABEL[node.status]}</span>
+                      return (
+                        <div
+                          key={node.id}
+                          onClick={()=> !locked && setOpenNode(isOpen ? null : node)}
+                          style={{
+                            flex:'1 1 160px', minWidth:0,
+                            padding:'14px 16px', borderRadius:12,
+                            cursor: locked ? 'default' : 'pointer',
+                            border:`1px solid ${isOpen ? color+'80' : 'rgba(255,255,255,.07)'}`,
+                            background: isOpen ? bg : 'var(--bg3)',
+                            opacity: locked ? .6 : 1,
+                            transition:'all .2s',
+                            display:'flex', flexDirection:'column', gap:8,
+                          }}
+                        >
+                          <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                            <div style={{
+                              width:22, height:22, borderRadius:'50%', flexShrink:0,
+                              border:`2px solid ${color}`, background:bg,
+                              display:'flex', alignItems:'center', justifyContent:'center',
+                              boxShadow: node.status==='aktif' ? `0 0 0 3px rgba(0,200,255,.12)` : 'none',
+                              transition:'all .2s',
+                            }}>
+                              {node.status==='selesai' && <span style={{ fontSize:10, color:'var(--green)', fontWeight:700 }}>✓</span>}
+                              {node.status==='aktif'   && <div style={{ width:6, height:6, borderRadius:'50%', background:'var(--cyan)' }}/>}
                             </div>
+                            <span style={{ fontSize:12, fontWeight:600, color: locked?'var(--muted)':'#fff', lineHeight:1.3 }}>
+                              {node.judul}
+                            </span>
                           </div>
 
-                          {/* Expanded detail */}
-                          {isOpen && (
-                            <div style={{
-                              marginTop:6, padding:'14px 16px', borderRadius:10,
-                              background:'var(--bg4)', border:'1px solid var(--border-c)',
-                            }}>
-                              <p style={{ fontSize:12, color:'var(--muted)', lineHeight:1.7, marginBottom:12 }}>
-                                Selesaikan modul ini untuk membuka materi berikutnya. Klik tombol di bawah setelah kamu mempelajari materinya.
-                              </p>
-                              <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
-                                <button style={{
-                                  padding:'7px 14px', background:'transparent',
-                                  border:'1px solid var(--border)', borderRadius:7,
-                                  fontSize:12, color:'var(--muted)', cursor:'pointer', fontFamily:'var(--font-b)',
-                                  transition:'all .18s',
-                                }}
-                                  onMouseEnter={e=>{e.currentTarget.style.borderColor='var(--cyan-30)';e.currentTarget.style.color='var(--cyan)'}}
-                                  onMouseLeave={e=>{e.currentTarget.style.borderColor='var(--border)';e.currentTarget.style.color='var(--muted)'}}
-                                >▶ Lihat Materi</button>
-
-                                {node.status==='aktif' && (
-                                  <button onClick={()=>markDone(node.id)} disabled={marking===node.id}
-                                    className="btn-primary" style={{ padding:'7px 16px', fontSize:12 }}>
-                                    {marking===node.id?'Menyimpan...':'Tandai Selesai ✓'}
-                                  </button>
-                                )}
-                                {node.status==='selesai' && (
-                                  <div style={{
-                                    padding:'7px 14px', borderRadius:7, fontSize:12,
-                                    background:'var(--green-10)', border:'1px solid rgba(0,230,118,.3)', color:'var(--green)',
-                                  }}>✓ Sudah Selesai</div>
-                                )}
-                              </div>
-                            </div>
-                          )}
+                          <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+                            <span style={{ fontSize:10, color:'var(--muted)' }}>Modul {node.urutan}</span>
+                            <span style={{
+                              fontSize:10, padding:'2px 8px', borderRadius:20,
+                              background:`${color}18`, color, border:`1px solid ${color}30`,
+                            }}>{STATUS_LABEL[node.status]}</span>
+                          </div>
                         </div>
                       )
                     })}
@@ -267,6 +386,15 @@ export default function LearningPathPage() {
           </div>
         )}
       </main>
+
+      {/* FAB bottom sheet */}
+      <NodeFAB
+        node={openNode}
+        onClose={()=>setOpenNode(null)}
+        onMarkDone={markDone}
+        onLihatMateri={(nodeId) => router.push(`/learning-path/${id}/materi/${nodeId}`)}
+        marking={marking}
+      />
     </div>
   )
 }
