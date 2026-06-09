@@ -123,11 +123,7 @@ function NodeFAB({
           </div>
           {['Modul', 'Video'].map(item => (
             <div key={item} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-              <div style={{
-                width: 14, height: 14, border: '1.5px solid var(--border)',
-                borderRadius: 3, flexShrink: 0,
-              }}/>
-              <span style={{ fontSize: 13, color: 'var(--muted)' }}>{item}</span>
+              <span style={{ fontSize: 13, color: 'var(--muted)', paddingLeft: 2 }}>{item}</span>
             </div>
           ))}
         </div>
