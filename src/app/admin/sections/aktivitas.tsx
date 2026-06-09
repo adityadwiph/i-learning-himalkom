@@ -30,7 +30,7 @@ export default function AktivitasPage() {
       nodeMap[n.id] = { judul: n.judul, lpId: n.learningpath_id }
     })
     const lpMap: Record<string, string> = {}
-    ;(lps || []).forEach((l: { id: string; 'Nama Learning Path': string }) => { lpMap[l.id] = l['Nama Learning Path'] })
+;(lps as any || []).forEach((l: any) => { lpMap[l.id] = l['Nama Learning Path'] })
     const profMap: Record<string, { username: string; nim: string }> = {}
     ;(profiles || []).forEach((p: { id: string; username: string; nim: string }) => { profMap[p.id] = { username: p.username, nim: p.nim } })
 
