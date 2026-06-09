@@ -17,7 +17,7 @@ export default function Navbar({ username = '', nim = '', role = '' }: NavbarPro
   const ref = useRef<HTMLDivElement>(null)
 
   const links = [
-    { href: '/eksplorasi', label: 'Eksplorasi', icon: '⊹ ' },
+    { href: '/eksplorasi', label: 'Eksplorasi', icon: '' },
     { href: '/dashboard',  label: 'Dashboard' },
   ]
 
