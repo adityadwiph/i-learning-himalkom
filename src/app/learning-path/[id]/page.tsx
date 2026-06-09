@@ -178,14 +178,15 @@ function NodeFAB({
 export default function LearningPathPage() {
   const { id }   = useParams<{ id:string }>()
   const router   = useRouter()
-  const [profile,  setProfile]  = useState<Profile|null>(null)
-  const [nim,      setNim]      = useState('')
-  const [lp,       setLp]       = useState<LP|null>(null)
-  const [nodes,    setNodes]    = useState<RNode[]>([])
-  const [userId,   setUserId]   = useState('')
-  const [openNode, setOpenNode] = useState<RNode|null>(null)  // now stores the full node
-  const [marking,  setMarking]  = useState<string|null>(null)
-  const [loading,  setLoading]  = useState(true)
+  const [profile,    setProfile]    = useState<Profile|null>(null)
+  const [nim,        setNim]        = useState('')
+  const [lp,         setLp]         = useState<LP|null>(null)
+  const [nodes,      setNodes]      = useState<RNode[]>([])
+  const [userId,     setUserId]     = useState('')
+  const [openNode,   setOpenNode]   = useState<RNode|null>(null)  // now stores the full node
+  const [marking,    setMarking]    = useState<string|null>(null)
+  const [loading,    setLoading]    = useState(true)
+  const [komunitasId,setKomunitasId] = useState<string|null>(null)
 
   const load = useCallback(async () => {
     const { data:{ user } } = await supabase.auth.getUser()
@@ -200,6 +201,9 @@ export default function LearningPathPage() {
       supabase.from('progress').select('roadmapnode_id,status').eq('user_id',user.id),
     ])
     setProfile(prof); setNim(mhs?.NIM||''); setLp(lpd)
+
+    const { data: komlp } = await supabase.from('komunitas_learningpath').select('komunitas_id').eq('Learning_Path_id', id).limit(1)
+    setKomunitasId((komlp && komlp[0]?.komunitas_id) || null)
 
     const doneSet = new Set((prog||[]).filter((p:{ status:string })=>p.status==='selesai').map((p:{ roadmapnode_id:string })=>p.roadmapnode_id))
     let foundActive = false
@@ -247,7 +251,11 @@ export default function LearningPathPage() {
       <main style={{ maxWidth:960, margin:'0 auto', padding:'44px 24px 80px' }}>
 
         {/* Back */}
-        <button onClick={()=>router.back()} className="btn-ghost" style={{ fontSize:12, padding:'6px 14px', marginBottom:32 }}>
+        <button
+          onClick={() => router.push(komunitasId ? `/eksplorasi/${komunitasId}` : '/eksplorasi')}
+          className="btn-ghost"
+          style={{ fontSize:12, padding:'6px 14px', marginBottom:32 }}
+        >
           ← Ganti Path
         </button>
 
