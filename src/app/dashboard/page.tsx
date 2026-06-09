@@ -103,7 +103,14 @@ export default function DashboardPage() {
         return { id: lpId, name: lpName, done: doneN?.length || 0, total: ids.length, komunitas: komNama }
       })
     )
-    setEnrolled(paths)
+
+    const sortedPaths = paths.sort((a, b) => {
+      const aPct = a.total > 0 ? a.done / a.total : 0
+      const bPct = b.total > 0 ? b.done / b.total : 0
+      if (bPct !== aPct) return bPct - aPct
+      return b.done - a.done
+    })
+    setEnrolled(sortedPaths)
 
     const totalNodes = paths.reduce((a, b) => a + b.total, 0)
     const doneNodes  = paths.reduce((a, b) => a + b.done, 0)
