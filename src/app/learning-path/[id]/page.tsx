@@ -235,7 +235,7 @@ export default function LearningPathPage() {
 
   const chunkSize = 3
   const rows: RNode[][] = []
-  for (let i=0; i<nodes.length; i+=chunkSize) rows.push(nodes.slice(i,i+chunkSize))
+  for (let i=0; i<nodes.length; i+=chunkSize) rows.push(nodes.slice(i, i+chunkSize))
 
   if (loading) return (
     <div style={{ minHeight:'100vh', background:'var(--bg)' }}>
