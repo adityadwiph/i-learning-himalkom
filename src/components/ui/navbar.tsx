@@ -16,10 +16,10 @@ export default function Navbar({ username = '', nim = '', role = '' }: NavbarPro
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
-  const links = [
-    { href: '/eksplorasi', label: 'Eksplorasi', icon: '' },
-    { href: '/dashboard',  label: 'Dashboard' },
-  ]
+ const links = [
+  { href: '/dashboard',  label: 'Dashboard' }, 
+  { href: '/eksplorasi', label: 'Eksplorasi', icon: '' }, 
+]
 
   async function logout() {
     await supabase.auth.signOut()
