@@ -164,13 +164,17 @@ async function handleRegister(e: React.FormEvent) {
             </div>
             <div style={{ display:'flex', flexWrap:'wrap', gap:6 }}>
               {COMMUNITIES.map(c => (
-                <button key={c} onClick={() => setActiveCom(c)} style={{
-                  padding:'3px 11px', borderRadius:20, fontSize:11, fontWeight:500,
-                  border:`1px solid ${c===activeCom ? 'var(--cyan)' : 'rgba(0,200,255,.22)'}`,
-                  color: c===activeCom ? '#080c16' : 'var(--cyan)',
-                  background: c===activeCom ? 'var(--cyan)' : 'var(--cyan-10)',
-                  cursor:'pointer', transition:'all .18s',
-                }}>{c}</button>
+                <span key={c} style={{
+                  padding:'3px 11px', 
+                  borderRadius:20, 
+                  fontSize:11, 
+                  fontWeight:500,
+                  border: '1px solid rgba(0,200,255,.22)', /* Warna border statis */
+                  color: 'var(--cyan)',                    /* Warna teks statis */
+                  background: 'var(--cyan-10)'             /* Warna background statis */
+                }}>
+                  {c}
+                </span>
               ))}
             </div>
           </div>
