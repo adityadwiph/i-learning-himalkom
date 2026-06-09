@@ -15,6 +15,28 @@ interface Materi   {
 
 type Tab = 'content' | 'video' | 'resources'
 
+function normalizeResources(value: unknown): { title: string; url: string }[] | undefined {
+  if (!value) return undefined
+  if (Array.isArray(value)) return value.filter(r => r && typeof r === 'object').map(r => ({
+    title: String((r as any).title || ''),
+    url: String((r as any).url || ''),
+  }))
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value)
+      if (Array.isArray(parsed)) {
+        return parsed.filter(r => r && typeof r === 'object').map(r => ({
+          title: String((r as any).title || ''),
+          url: String((r as any).url || ''),
+        }))
+      }
+    } catch {
+      return undefined
+    }
+  }
+  return undefined
+}
+
 export default function MateriPage() {
   const { id, nodeId } = useParams<{ id: string; nodeId: string }>()
   const router = useRouter()
@@ -47,8 +69,9 @@ export default function MateriPage() {
     setLp(lpd)
     setNode(nd)
     setAllNodes(allNd || [])
-    setMateriList(mat || [])
-    if (mat && mat.length > 0) setActiveMateri(mat[0])
+    const normalizedMat = (mat || []).map((item: any) => ({ ...item, resources: normalizeResources(item.resources) }))
+    setMateriList(normalizedMat)
+    if (normalizedMat.length > 0) setActiveMateri(normalizedMat[0])
     setLoading(false)
   }, [id, nodeId, router])
 
@@ -285,7 +308,7 @@ export default function MateriPage() {
               {/* Tab: Resources */}
               {tab === 'resources' && (
                 <div style={{ maxWidth: 720 }}>
-                  {activeMateri.resources && activeMateri.resources.length > 0 ? (
+                  {Array.isArray(activeMateri.resources) && activeMateri.resources.length > 0 ? (
                     <div style={{ display: 'grid', gap: 14 }}>
                       {activeMateri.resources.map((res, i) => (
                         <a key={i} href={res.url} target="_blank" rel="noreferrer" style={{
