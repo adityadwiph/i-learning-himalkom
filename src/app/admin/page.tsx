@@ -245,7 +245,17 @@ export default function AdminPage() {
             </div>
           ))}
           <div style={{ borderTop: '1px solid var(--border)', marginTop: 16, paddingTop: 12 }}>
-            <div onClick={() => router.push('/dashboard')} style={{ ...sideItem('dashboard'), color: 'var(--muted)' }}>← Kembali</div>
+            <div 
+              onClick={() => router.push('/dashboard')} 
+              style={{ 
+                ...sideItem('kembali' as any), 
+                color: 'var(--muted)',
+                background: 'var(--bg3)', /* Memberikan warna background permanen, bisa diganti misal 'rgba(255,255,255,0.05)' */
+                border: '1px solid var(--border)' /* Memberikan garis tepi permanen */
+              }}
+            >
+              ← Kembali
+            </div>
           </div>
         </aside>
 
