@@ -37,7 +37,7 @@ export default function LoginPage() {
     const { error } = await supabase.auth.signInWithPassword({ email, password: pass })
     setLoginLoading(false)
     if (error) { setLoginErr('Email atau password salah.'); return }
-    router.push('/eksplorasi')
+    router.push('/dashboard')
   }
 
   function goStep2(e: React.FormEvent) {
