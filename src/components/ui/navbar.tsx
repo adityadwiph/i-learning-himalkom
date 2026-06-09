@@ -39,11 +39,12 @@ export default function Navbar({ username = '', nim = '', role = '' }: NavbarPro
   return (
     <nav style={{
       position: 'sticky', top: 0, zIndex: 100,
-      height: 56, display: 'flex', alignItems: 'center',
-      padding: '0 28px', gap: 8,
-      background: 'rgba(8,12,22,.85)',
-      backdropFilter: 'blur(18px)',
-      borderBottom: '1px solid rgba(255,255,255,.06)',
+  height: 56, display: 'flex', alignItems: 'center',
+  justifyContent: 'space-between', 
+  padding: '0 28px', gap: 8,
+  background: 'rgba(8,12,22,.85)',
+  backdropFilter: 'blur(18px)',
+  borderBottom: '1px solid rgba(255,255,255,.06)',
     }}>
       {/* Logo */}
       <Link href="/eksplorasi" style={{ display: 'flex', alignItems: 'center', gap: 8, textDecoration: 'none', marginRight: 12 }}>
@@ -58,7 +59,13 @@ export default function Navbar({ username = '', nim = '', role = '' }: NavbarPro
       </Link>
 
       {/* Nav links */}
-      <div style={{ display: 'flex', gap: 2, flex: 1 }}>
+      <div style={{ 
+      display: 'flex', 
+      gap: 2, 
+      position: 'absolute', 
+      left: '50%', 
+     transform: 'translateX(-50%)' 
+      }}>
         {links.map(l => {
           const active = path.startsWith(l.href)
           return (
