@@ -19,6 +19,35 @@ const EMPTY_NODE: Node = { id: '', judul: '', urutan: 1, learningpath_id: '' }
 const EMPTY_MATERI: Materi = { id: '', judul: '', konten: '', tipe: 'text', video_url: '', urutan: 1, section_title: '', roadmapnode_id: '', resources: [] }
 const EMPTY_KOM: Komunitas = { id: '', nama_komunitas: '', deskripsi_komunitas: '' }
 
+function normalizeResources(value: unknown): { title: string; url: string }[] {
+  if (!value) return []
+  if (Array.isArray(value)) {
+    return value
+      .filter(item => item && typeof item === 'object')
+      .map(item => ({
+        title: String((item as any).title || ''),
+        url: String((item as any).url || ''),
+      }))
+  }
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value)
+      return normalizeResources(parsed)
+    } catch {
+      return []
+    }
+  }
+  if (typeof value === 'object' && value !== null) {
+    const item = value as Record<string, any>
+    if ('title' in item || 'url' in item) {
+      return [{ title: String(item.title || ''), url: String(item.url || '') }]
+    }
+    const values = Object.values(item)
+    if (values.length > 0) return normalizeResources(values)
+  }
+  return []
+}
+
 export default function AdminPage() {
   const router = useRouter()
   const [profile,    setProfile]    = useState<Profile | null>(null)
@@ -60,7 +89,7 @@ export default function AdminPage() {
     ])
     setLps(lpd || [])
     setNodes(nd || [])
-    setMateriList(mat || [])
+    setMateriList((mat || []).map((item: any) => ({ ...item, resources: normalizeResources(item.resources) })))
     setKomunitas(kom || [])
     setKomLPs(kl || [])
     setLoading(false)
@@ -93,7 +122,16 @@ export default function AdminPage() {
 
   async function saveMateri() {
     setSaving(true)
-    const p = { judul: formMateri.judul, konten: formMateri.konten, tipe: formMateri.tipe, video_url: formMateri.video_url, urutan: formMateri.urutan, section_title: formMateri.section_title, roadmapnode_id: formMateri.roadmapnode_id, resources: formMateri.resources }
+    const p = {
+      judul: formMateri.judul,
+      konten: formMateri.konten,
+      tipe: formMateri.tipe,
+      video_url: formMateri.video_url,
+      urutan: formMateri.urutan,
+      section_title: formMateri.section_title,
+      roadmapnode_id: formMateri.roadmapnode_id,
+      resources: normalizeResources(formMateri.resources),
+    }
     formMateri.id ? await supabase.from('materi').update(p).eq('id', formMateri.id)
                   : await supabase.from('materi').insert(p)
     await load(); setModal(null); setFormMateri(EMPTY_MATERI); setSaving(false)
@@ -181,6 +219,7 @@ export default function AdminPage() {
     background: 'var(--bg)', border: '1px solid var(--border)',
     color: 'var(--text)', fontFamily: 'var(--font-b)', outline: 'none', marginBottom: 10,
   }
+  const formResources = normalizeResources(formMateri.resources)
   const labelStyle: React.CSSProperties = { fontSize: 11, color: 'var(--muted)', marginBottom: 4, display: 'block', letterSpacing: '0.5px' }
   const thStyle: React.CSSProperties    = { padding: '10px 14px', fontSize: 11, color: 'var(--muted)', textAlign: 'left', letterSpacing: '0.5px', borderBottom: '1px solid var(--border)', fontWeight: 600 }
   const tdStyle: React.CSSProperties    = { padding: '11px 14px', fontSize: 13, color: 'var(--text)', borderBottom: '1px solid var(--border)', verticalAlign: 'middle' }
@@ -347,7 +386,7 @@ export default function AdminPage() {
                         </td>
                         <td style={tdStyle}>
                           <div style={{ display: 'flex', gap: 8 }}>
-                            <button className="btn-ghost" style={{ fontSize: 11, padding: '4px 10px' }} onClick={() => { setFormMateri(m); setModal('materi') }}>Edit</button>
+                            <button className="btn-ghost" style={{ fontSize: 11, padding: '4px 10px' }} onClick={() => { setFormMateri({ ...m, resources: normalizeResources(m.resources) }); setModal('materi') }}>Edit</button>
                             <button style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, cursor: 'pointer', background: 'rgba(239,68,68,.1)', border: '1px solid rgba(239,68,68,.3)', color: '#f87171', opacity: deleting === m.id ? .5 : 1 }} onClick={() => deleteRow('materi', m.id)}>Hapus</button>
                           </div>
                         </td>
@@ -473,19 +512,19 @@ export default function AdminPage() {
                 <label style={labelStyle}>VIDEO URL (opsional)</label>
                 <input style={inputStyle} value={formMateri.video_url} onChange={e => setFormMateri(p => ({ ...p, video_url: e.target.value }))} placeholder="https://www.youtube.com/watch?v=..." />
                 <label style={labelStyle}>RESOURCES</label>
-                {(formMateri.resources || []).map((res, idx) => (
+                {formResources.map((res, idx) => (
                   <div key={idx} style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 8, marginBottom: 10 }}>
                     <div>
-                      <input style={inputStyle} value={res.title} placeholder="Judul resource" onChange={e => setFormMateri(p => ({ ...p, resources: (p.resources || []).map((item, i) => i === idx ? { ...item, title: e.target.value } : item) }))} />
-                      <input style={inputStyle} value={res.url} placeholder="URL resource" onChange={e => setFormMateri(p => ({ ...p, resources: (p.resources || []).map((item, i) => i === idx ? { ...item, url: e.target.value } : item) }))} />
+                      <input style={inputStyle} value={res.title} placeholder="Judul resource" onChange={e => setFormMateri(p => ({ ...p, resources: normalizeResources((p.resources || []).map((item, i) => i === idx ? { ...item, title: e.target.value } : item)) }))} />
+                      <input style={inputStyle} value={res.url} placeholder="URL resource" onChange={e => setFormMateri(p => ({ ...p, resources: normalizeResources((p.resources || []).map((item, i) => i === idx ? { ...item, url: e.target.value } : item)) }))} />
                     </div>
-                    <button onClick={() => setFormMateri(p => ({ ...p, resources: (p.resources || []).filter((_, i) => i !== idx) }))}
+                    <button onClick={() => setFormMateri(p => ({ ...p, resources: normalizeResources((p.resources || []).filter((_, i) => i !== idx)) }))}
                       style={{ padding: '9px 12px', borderRadius: 8, background: 'rgba(239,68,68,.1)', border: '1px solid rgba(239,68,68,.25)', color: '#f87171', cursor: 'pointer', fontSize: 12, alignSelf: 'start' }}>
                       Hapus
                     </button>
                   </div>
                 ))}
-                <button onClick={() => setFormMateri(p => ({ ...p, resources: [ ...(p.resources || []), { title: '', url: '' } ] }))}
+                <button onClick={() => setFormMateri(p => ({ ...p, resources: normalizeResources([ ...(p.resources || []), { title: '', url: '' } ]) }))}
                   style={{ marginBottom: 16, padding: '10px 14px', borderRadius: 8, background: 'rgba(0,200,255,.08)', border: '1px solid rgba(0,200,255,.2)', color: 'var(--cyan)', cursor: 'pointer', fontSize: 12, fontWeight: 700 }}>
                   + Tambah Resource
                 </button>

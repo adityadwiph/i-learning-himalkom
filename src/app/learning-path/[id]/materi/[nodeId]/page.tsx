@@ -15,8 +15,8 @@ interface Materi   {
 
 type Tab = 'content' | 'video' | 'resources'
 
-function normalizeResources(value: unknown): { title: string; url: string }[] | undefined {
-  if (!value) return undefined
+function normalizeResources(value: unknown): { title: string; url: string }[] {
+  if (!value) return []
   if (Array.isArray(value)) return value.filter(r => r && typeof r === 'object').map(r => ({
     title: String((r as any).title || ''),
     url: String((r as any).url || ''),
@@ -24,17 +24,20 @@ function normalizeResources(value: unknown): { title: string; url: string }[] | 
   if (typeof value === 'string') {
     try {
       const parsed = JSON.parse(value)
-      if (Array.isArray(parsed)) {
-        return parsed.filter(r => r && typeof r === 'object').map(r => ({
-          title: String((r as any).title || ''),
-          url: String((r as any).url || ''),
-        }))
-      }
+      return normalizeResources(parsed)
     } catch {
-      return undefined
+      return []
     }
   }
-  return undefined
+  if (typeof value === 'object' && value !== null) {
+    const item = value as Record<string, any>
+    if ('title' in item || 'url' in item) {
+      return [{ title: String(item.title || ''), url: String(item.url || '') }]
+    }
+    const values = Object.values(item)
+    if (values.length > 0) return normalizeResources(values)
+  }
+  return []
 }
 
 export default function MateriPage() {
