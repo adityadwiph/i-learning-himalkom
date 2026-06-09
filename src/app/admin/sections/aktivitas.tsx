@@ -21,7 +21,7 @@ export default function AktivitasPage() {
     const [{ data: prog }, { data: nodes }, { data: lps }, { data: profiles }] = await Promise.all([
       supabase.from('progress').select('id,user_id,roadmapnode_id,updated_at,status').eq('status', 'selesai').order('updated_at', { ascending: false }).limit(50),
       supabase.from('roadmapnode').select('id,judul,learningpath_id'),
-      supabase.from('learningpath').select('id,Nama Learning Path'),
+      supabase.from('learningpath').select('id,"Nama Learning Path"'),
       supabase.from('profiles').select('id,username,nim'),
     ])
 

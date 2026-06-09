@@ -7,18 +7,18 @@ import { useState, useRef, useEffect } from 'react'
 interface NavbarProps {
   username?: string
   nim?: string
+  role?: string
 }
 
-export default function Navbar({ username = '', nim = '' }: NavbarProps) {
+export default function Navbar({ username = '', nim = '', role = '' }: NavbarProps) {
   const path     = usePathname()
   const router   = useRouter()
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
   const links = [
-    { href: '/eksplorasi',   label: 'Eksplorasi', icon: '⊹ ' },
-    { href: '/dashboard',    label: 'Dashboard' },
-    { href: '/ruang-belajar',label: 'Ruang Belajar' },
+    { href: '/eksplorasi', label: 'Eksplorasi', icon: '⊹ ' },
+    { href: '/dashboard',  label: 'Dashboard' },
   ]
 
   async function logout() {
@@ -26,7 +26,6 @@ export default function Navbar({ username = '', nim = '' }: NavbarProps) {
     router.push('/login')
   }
 
-  // Tutup dropdown kalau klik di luar
   useEffect(() => {
     function handleClick(e: MouseEvent) {
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
@@ -98,19 +97,21 @@ export default function Navbar({ username = '', nim = '' }: NavbarProps) {
           )}
           <div style={{
             width: 34, height: 34, borderRadius: '50%',
-            background: 'rgba(0,200,255,.15)', border: '1px solid rgba(0,200,255,.35)',
-            fontFamily: 'var(--font-d)', fontWeight: 800, fontSize: 12, color: 'var(--cyan)',
+            background: role === 'admin' ? 'rgba(167,139,250,.15)' : 'rgba(0,200,255,.15)',
+            border: `1px solid ${role === 'admin' ? 'rgba(167,139,250,.4)' : 'rgba(0,200,255,.35)'}`,
+            fontFamily: 'var(--font-d)', fontWeight: 800, fontSize: 12,
+            color: role === 'admin' ? '#a78bfa' : 'var(--cyan)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             flexShrink: 0,
           }}>{initials}</div>
         </button>
 
-        {/* Dropdown menu */}
+        {/* Dropdown */}
         {open && (
           <div style={{
             position: 'absolute', right: 0, top: 'calc(100% + 8px)',
             background: 'var(--bg2)', border: '1px solid rgba(255,255,255,.1)',
-            borderRadius: 12, overflow: 'hidden', minWidth: 160,
+            borderRadius: 12, overflow: 'hidden', minWidth: 180,
             boxShadow: '0 16px 40px rgba(0,0,0,.5)',
             zIndex: 200,
           }}>
@@ -121,19 +122,47 @@ export default function Navbar({ username = '', nim = '' }: NavbarProps) {
             }}>
               <div style={{
                 width: 32, height: 32, borderRadius: '50%',
-                background: 'rgba(0,200,255,.15)', border: '1px solid rgba(0,200,255,.3)',
+                background: role === 'admin' ? 'rgba(167,139,250,.15)' : 'rgba(0,200,255,.15)',
+                border: `1px solid ${role === 'admin' ? 'rgba(167,139,250,.3)' : 'rgba(0,200,255,.3)'}`,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontFamily: 'var(--font-d)', fontWeight: 800, fontSize: 11, color: 'var(--cyan)',
+                fontFamily: 'var(--font-d)', fontWeight: 800, fontSize: 11,
+                color: role === 'admin' ? '#a78bfa' : 'var(--cyan)',
                 flexShrink: 0,
               }}>{initials}</div>
               <div>
                 <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text)' }}>{username}</div>
                 <div style={{ fontSize: 10, color: 'var(--muted)' }}>{nim}</div>
+                {role === 'admin' && (
+                  <div style={{
+                    fontSize: 9, marginTop: 2, display: 'inline-block',
+                    padding: '1px 6px', borderRadius: 20,
+                    background: 'rgba(167,139,250,.15)', border: '1px solid rgba(167,139,250,.3)',
+                    color: '#a78bfa', letterSpacing: '0.5px',
+                  }}>ADMIN</div>
+                )}
               </div>
             </div>
 
-            {/* Menu items */}
             <div style={{ padding: '6px' }}>
+              {/* Admin Dashboard — hanya muncul kalau role admin */}
+              {role === 'admin' && (
+                <Link
+                  href="/admin"
+                  onClick={() => setOpen(false)}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 10,
+                    padding: '9px 12px', borderRadius: 8, textDecoration: 'none',
+                    fontSize: 13, color: '#a78bfa', transition: 'background .15s',
+                    marginBottom: 2,
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.background = 'rgba(167,139,250,.08)'}
+                  onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                >
+                  <span style={{ fontSize: 15 }}>⚙️</span>
+                  Admin Dashboard
+                </Link>
+              )}
+
               <Link
                 href="/profil"
                 onClick={() => setOpen(false)}

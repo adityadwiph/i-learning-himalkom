@@ -10,6 +10,7 @@ interface LP       { id: string; 'Nama Learning Path': string }
 interface Materi   {
   id: string; judul: string; konten: string; tipe: string
   video_url: string; urutan: number; section_title: string; roadmapnode_id: string
+  resources?: { title: string; url: string }[]
 }
 
 type Tab = 'content' | 'video' | 'resources'
@@ -35,7 +36,7 @@ export default function MateriPage() {
     const [{ data: prof }, { data: mhs }, { data: lpd }, { data: nd }, { data: allNd }, { data: mat }] = await Promise.all([
       supabase.from('profiles').select('username').eq('id', user.id).single(),
       supabase.from('Mahasiswa').select('NIM').eq('id', user.id).single(),
-      supabase.from('learningpath').select("id,Nama Learning Path").eq('id', id).single(),
+      supabase.from('learningpath').select('*').eq('id', id).single(),
       supabase.from('roadmapnode').select('*').eq('id', nodeId).single(),
       supabase.from('roadmapnode').select('*').eq('learningpath_id', id).order('urutan'),
       supabase.from('materi').select('*').eq('roadmapnode_id', nodeId).order('urutan'),
@@ -284,14 +285,29 @@ export default function MateriPage() {
               {/* Tab: Resources */}
               {tab === 'resources' && (
                 <div style={{ maxWidth: 720 }}>
-                  <div style={{
-                    background: 'var(--bg3)', border: '1px solid var(--border)',
-                    borderRadius: 12, padding: '60px 40px', textAlign: 'center',
-                    color: 'var(--muted)',
-                  }}>
-                    <div style={{ fontSize: 32, marginBottom: 12 }}>📎</div>
-                    <p>Belum ada resource untuk materi ini.</p>
-                  </div>
+                  {activeMateri.resources && activeMateri.resources.length > 0 ? (
+                    <div style={{ display: 'grid', gap: 14 }}>
+                      {activeMateri.resources.map((res, i) => (
+                        <a key={i} href={res.url} target="_blank" rel="noreferrer" style={{
+                          display: 'block', padding: 18, borderRadius: 14,
+                          background: 'var(--bg3)', border: '1px solid var(--border)',
+                          color: 'var(--text)', textDecoration: 'none', transition: 'background .15s',
+                        }}>
+                          <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 6 }}>{res.title || 'Resource'}</div>
+                          <div style={{ fontSize: 12, color: 'var(--muted)', wordBreak: 'break-all' }}>{res.url}</div>
+                        </a>
+                      ))}
+                    </div>
+                  ) : (
+                    <div style={{
+                      background: 'var(--bg3)', border: '1px solid var(--border)',
+                      borderRadius: 12, padding: '60px 40px', textAlign: 'center',
+                      color: 'var(--muted)',
+                    }}>
+                      <div style={{ fontSize: 32, marginBottom: 12 }}>📎</div>
+                      <p>Belum ada resource untuk materi ini.</p>
+                    </div>
+                  )}
                 </div>
               )}
 

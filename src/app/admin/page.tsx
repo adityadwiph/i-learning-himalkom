@@ -7,17 +7,17 @@ import Navbar from '@/components/ui/navbar'
 interface Profile   { username: string; role: string }
 interface LP        { id: string; 'Nama Learning Path': string; deskripsi: string }
 interface Node      { id: string; judul: string; urutan: number; learningpath_id: string }
-interface Materi    { id: string; judul: string; konten: string; tipe: string; video_url: string; urutan: number; section_title: string; roadmapnode_id: string }
+interface Materi    { id: string; judul: string; konten: string; tipe: string; video_url: string; urutan: number; section_title: string; roadmapnode_id: string; resources?: { title: string; url: string }[] }
 interface Komunitas { id: string; nama_komunitas: string; deskripsi_komunitas: string }
 interface KomLP     { komunitas_id: string; Learning_Path_id: string }
 
 type View  = 'dashboard' | 'learning-paths' | 'nodes' | 'materi' | 'komunitas'
 type Modal = 'lp' | 'node' | 'materi' | 'komunitas' | 'relasi' | null
 
-const EMPTY_LP     = { id: '', 'Nama Learning Path': '', deskripsi: '' }
-const EMPTY_NODE   = { id: '', judul: '', urutan: 1, learningpath_id: '' }
-const EMPTY_MATERI = { id: '', judul: '', konten: '', tipe: 'text', video_url: '', urutan: 1, section_title: '', roadmapnode_id: '' }
-const EMPTY_KOM    = { id: '', nama_komunitas: '', deskripsi_komunitas: '' }
+const EMPTY_LP: LP = { id: '', 'Nama Learning Path': '', deskripsi: '' }
+const EMPTY_NODE: Node = { id: '', judul: '', urutan: 1, learningpath_id: '' }
+const EMPTY_MATERI: Materi = { id: '', judul: '', konten: '', tipe: 'text', video_url: '', urutan: 1, section_title: '', roadmapnode_id: '', resources: [] }
+const EMPTY_KOM: Komunitas = { id: '', nama_komunitas: '', deskripsi_komunitas: '' }
 
 export default function AdminPage() {
   const router = useRouter()
@@ -93,7 +93,7 @@ export default function AdminPage() {
 
   async function saveMateri() {
     setSaving(true)
-    const p = { judul: formMateri.judul, konten: formMateri.konten, tipe: formMateri.tipe, video_url: formMateri.video_url, urutan: formMateri.urutan, section_title: formMateri.section_title, roadmapnode_id: formMateri.roadmapnode_id }
+    const p = { judul: formMateri.judul, konten: formMateri.konten, tipe: formMateri.tipe, video_url: formMateri.video_url, urutan: formMateri.urutan, section_title: formMateri.section_title, roadmapnode_id: formMateri.roadmapnode_id, resources: formMateri.resources }
     formMateri.id ? await supabase.from('materi').update(p).eq('id', formMateri.id)
                   : await supabase.from('materi').insert(p)
     await load(); setModal(null); setFormMateri(EMPTY_MATERI); setSaving(false)
@@ -127,9 +127,29 @@ export default function AdminPage() {
   async function deleteRow(table: string, id: string) {
     if (!confirm('Yakin hapus data ini?')) return
     setDeleting(id)
+
+    if (table === 'learningpath') {
+      // Hapus relasi komunitas dulu
+      await supabase.from('komunitas_learningpath').delete().eq('Learning_Path_id', id)
+      // Hapus materi dari semua node LP ini
+      const nodeIds = nodes.filter(n => n.learningpath_id === id).map(n => n.id)
+      if (nodeIds.length > 0) {
+        await supabase.from('materi').delete().in('roadmapnode_id', nodeIds)
+        await supabase.from('progress').delete().in('roadmapnode_id', nodeIds)
+        await supabase.from('roadmapnode').delete().eq('learningpath_id', id)
+      }
+    }
+
+    if (table === 'roadmapnode') {
+      // Hapus materi & progress dari node ini dulu
+      await supabase.from('materi').delete().eq('roadmapnode_id', id)
+      await supabase.from('progress').delete().eq('roadmapnode_id', id)
+    }
+
     if (table === 'komunitas') {
       await supabase.from('komunitas_learningpath').delete().eq('komunitas_id', id)
     }
+
     await supabase.from(table).delete().eq('id', id)
     await load(); setDeleting('')
   }
@@ -313,7 +333,7 @@ export default function AdminPage() {
               </div>
               <div style={{ background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                  <thead><tr><th style={thStyle}>No</th><th style={thStyle}>Judul</th><th style={thStyle}>Section</th><th style={thStyle}>Modul</th><th style={thStyle}>Tipe</th><th style={thStyle}>Aksi</th></tr></thead>
+                  <thead><tr><th style={thStyle}>No</th><th style={thStyle}>Judul</th><th style={thStyle}>Section</th><th style={thStyle}>Modul</th><th style={thStyle}>Resources</th><th style={thStyle}>Tipe</th><th style={thStyle}>Aksi</th></tr></thead>
                   <tbody>
                     {filteredMateri.map(m => (
                       <tr key={m.id}>
@@ -321,6 +341,7 @@ export default function AdminPage() {
                         <td style={tdStyle}><span style={{ fontWeight: 600 }}>{m.judul}</span></td>
                         <td style={{ ...tdStyle, color: 'var(--muted)' }}>{m.section_title || '-'}</td>
                         <td style={{ ...tdStyle, color: 'var(--muted)' }}>{nodeName(m.roadmapnode_id)}</td>
+                        <td style={{ ...tdStyle, color: 'var(--muted)' }}>{m.resources?.length ?? 0} link</td>
                         <td style={tdStyle}>
                           <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 20, background: m.tipe === 'video' ? 'rgba(251,191,36,.1)' : 'var(--cyan-10)', color: m.tipe === 'video' ? 'var(--amber)' : 'var(--cyan)', border: `1px solid ${m.tipe === 'video' ? 'rgba(251,191,36,.3)' : 'var(--cyan-20)'}` }}>{m.tipe}</span>
                         </td>
@@ -451,6 +472,23 @@ export default function AdminPage() {
                 <textarea style={{ ...inputStyle, height: 120, resize: 'vertical' }} value={formMateri.konten} onChange={e => setFormMateri(p => ({ ...p, konten: e.target.value }))} placeholder="Isi materi / penjelasan..." />
                 <label style={labelStyle}>VIDEO URL (opsional)</label>
                 <input style={inputStyle} value={formMateri.video_url} onChange={e => setFormMateri(p => ({ ...p, video_url: e.target.value }))} placeholder="https://www.youtube.com/watch?v=..." />
+                <label style={labelStyle}>RESOURCES</label>
+                {(formMateri.resources || []).map((res, idx) => (
+                  <div key={idx} style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 8, marginBottom: 10 }}>
+                    <div>
+                      <input style={inputStyle} value={res.title} placeholder="Judul resource" onChange={e => setFormMateri(p => ({ ...p, resources: (p.resources || []).map((item, i) => i === idx ? { ...item, title: e.target.value } : item) }))} />
+                      <input style={inputStyle} value={res.url} placeholder="URL resource" onChange={e => setFormMateri(p => ({ ...p, resources: (p.resources || []).map((item, i) => i === idx ? { ...item, url: e.target.value } : item) }))} />
+                    </div>
+                    <button onClick={() => setFormMateri(p => ({ ...p, resources: (p.resources || []).filter((_, i) => i !== idx) }))}
+                      style={{ padding: '9px 12px', borderRadius: 8, background: 'rgba(239,68,68,.1)', border: '1px solid rgba(239,68,68,.25)', color: '#f87171', cursor: 'pointer', fontSize: 12, alignSelf: 'start' }}>
+                      Hapus
+                    </button>
+                  </div>
+                ))}
+                <button onClick={() => setFormMateri(p => ({ ...p, resources: [ ...(p.resources || []), { title: '', url: '' } ] }))}
+                  style={{ marginBottom: 16, padding: '10px 14px', borderRadius: 8, background: 'rgba(0,200,255,.08)', border: '1px solid rgba(0,200,255,.2)', color: 'var(--cyan)', cursor: 'pointer', fontSize: 12, fontWeight: 700 }}>
+                  + Tambah Resource
+                </button>
                 <label style={labelStyle}>URUTAN</label>
                 <input style={inputStyle} type="number" min={1} value={formMateri.urutan} onChange={e => setFormMateri(p => ({ ...p, urutan: parseInt(e.target.value) || 1 }))} />
                 <div style={{ display: 'flex', gap: 10, marginTop: 8 }}>

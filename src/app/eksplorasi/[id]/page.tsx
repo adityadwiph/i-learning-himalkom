@@ -55,24 +55,24 @@ export default function SpesialisasiPage() {
     setLoading(false)
   }
 
-async function pilih(lpId: string) {
-  setJoining(true)
-  const { data:{ user } } = await supabase.auth.getUser()
-  if (!user) return
+  async function pilih(lpId: string) {
+    setJoining(true)
+    const { data:{ user } } = await supabase.auth.getUser()
+    if (!user) return
 
-  await Promise.all([
-    supabase.from('komunitas_member').upsert(
-      { id_user: user.id, id_komunitas: id },
-      { onConflict: 'id_user,id_komunitas', ignoreDuplicates: true }
-    ),
-    supabase.from('user_learningpath').upsert(
-      { user_id: user.id, LearningPath_id: lpId },
-      { onConflict: 'user_id,LearningPath_id', ignoreDuplicates: true }
-    ),
-  ])
-  setJoining(false)
-  router.push(`/learning-path/${lpId}`)
-}
+    await Promise.all([
+      supabase.from('komunitas_member').upsert(
+        { id_user: user.id, id_komunitas: id },
+        { onConflict: 'id_user,id_komunitas', ignoreDuplicates: true }
+      ),
+      supabase.from('user_learningpath').upsert(
+        { user_id: user.id, LearningPath_id: lpId },
+        { onConflict: 'user_id,LearningPath_id', ignoreDuplicates: true }
+      ),
+    ])
+    setJoining(false)
+    router.push(`/learning-path/${lpId}`)
+  }
 
   const name = kom?.nama_komunitas||''
   const icon = KOM_ICON[name]||'📚'
@@ -156,22 +156,11 @@ async function pilih(lpId: string) {
                       {lp.deskripsi||'Jalur pembelajaran terstruktur untuk mencapai kompetensi di bidang ini.'}
                     </p>
 
-                    <div style={{ display:'flex', gap:16, marginBottom:16 }}>
+                    <div style={{ display:'flex', gap:16 }}>
                       {['4-6 bulan','8+ Modul'].map(info=>(
                         <div key={info} style={{ fontSize:11, color:isSelected?'rgba(0,200,255,.7)':'var(--muted)' }}>{info}</div>
                       ))}
                     </div>
-
-                    <button onClick={e=>{e.stopPropagation();pilih(lp.id)}} disabled={joining}
-                      style={{
-                        width:'100%', padding:'9px', border:`1px solid ${isSelected?'var(--cyan)':'rgba(255,255,255,.15)'}`,
-                        borderRadius:8, background: isSelected?'var(--cyan)':'transparent',
-                        color: isSelected?'#080c16':'var(--muted)',
-                        fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'var(--font-b)',
-                        transition:'all .18s',
-                      }}>
-                      {joining?'Mendaftarkan...':'Pilih ini'}
-                    </button>
                   </div>
                 )
               })}

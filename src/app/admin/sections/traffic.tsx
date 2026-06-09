@@ -16,7 +16,7 @@ export default function TrafficPage() {
       const [{ data: prog }, { data: nodes }, { data: lps }, { data: users }] = await Promise.all([
         supabase.from('progress').select('roadmapnode_id,updated_at,user_id'),
         supabase.from('roadmapnode').select('id,judul,learningpath_id'),
-        supabase.from('learningpath').select('id,Nama Learning Path'),
+        supabase.from('learningpath').select('id,"Nama Learning Path"'),
         supabase.from('profiles').select('id', { count: 'exact', head: true }),
       ])
 
