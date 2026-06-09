@@ -137,7 +137,7 @@ export default function DashboardPage() {
             {new Date().toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
           </div>
           <h1 style={{ fontFamily: 'var(--font-d)', fontWeight: 900, fontSize: 'clamp(22px,3.5vw,36px)', color: '#fff', marginBottom: 6 }}>
-            Halo, <span style={{ color: 'var(--cyan)' }}>{profile?.username}!</span> 👋
+            Halo, <span style={{ color: 'var(--cyan)' }}>{profile?.username}!</span> 
           </h1>
           <p style={{ fontSize: 13, color: 'var(--muted)' }}>
             {enrolled.length === 0
@@ -219,8 +219,8 @@ export default function DashboardPage() {
             </div>
             <div className="card" style={{ padding: '16px 20px' }}>
               {recent.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '24px 0' }}>
-                  <div style={{ fontSize: 28, marginBottom: 8 }}>🕐</div>
+                <div style={{ textAlign: 'center', padding: '40px 0' }}>
+                  <div style={{ fontSize: 28, marginBottom: 8 }}></div>
                   <p style={{ fontSize: 13, color: 'var(--muted)' }}>Belum ada aktivitas.</p>
                 </div>
               ) : recent.map((r, i) => (

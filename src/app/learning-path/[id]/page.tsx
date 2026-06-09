@@ -4,7 +4,7 @@ import { useParams, useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase/client'
 import Navbar from '@/components/ui/navbar'
 
-interface LP      { id:string; Nama_Learning_Path:string; deskripsi:string }
+interface LP      { id:string; 'Nama Learning Path':string; deskripsi:string }
 interface Node    { id:string; judul:string; urutan:number; learningpath_id:string }
 interface Profile { username:string }
 
@@ -259,7 +259,7 @@ export default function LearningPathPage() {
             lineHeight:1.08, marginBottom:8,
           }}>
             <span style={{ color:'var(--text)' }}>Learning Path — </span>
-            <span style={{ color:'var(--cyan)' }}>{lp?.Nama_Learning_Path}</span>
+            <span style={{ color:'var(--cyan)' }}>{lp?.['Nama Learning Path']}</span>
           </h1>
           <p style={{ fontSize:13, color:'var(--muted)', lineHeight:1.65, maxWidth:520, marginBottom:28 }}>
             {lp?.deskripsi||'Ikuti setiap modul secara berurutan untuk menyelesaikan jalur pembelajaran ini.'}

@@ -6,7 +6,7 @@ import Navbar from '@/components/ui/navbar'
 
 interface Profile  { username: string }
 interface Node     { id: string; judul: string; urutan: number; learningpath_id: string }
-interface LP       { id: string; Nama_Learning_Path: string }
+interface LP       { id: string; 'Nama Learning Path': string }
 interface Materi   {
   id: string; judul: string; konten: string; tipe: string
   video_url: string; urutan: number; section_title: string; roadmapnode_id: string
@@ -35,7 +35,7 @@ export default function MateriPage() {
     const [{ data: prof }, { data: mhs }, { data: lpd }, { data: nd }, { data: allNd }, { data: mat }] = await Promise.all([
       supabase.from('profiles').select('username').eq('id', user.id).single(),
       supabase.from('Mahasiswa').select('NIM').eq('id', user.id).single(),
-      supabase.from('learningpath').select('id,Nama_Learning_Path').eq('id', id).single(),
+      supabase.from('learningpath').select("id,Nama Learning Path").eq('id', id).single(),
       supabase.from('roadmapnode').select('*').eq('id', nodeId).single(),
       supabase.from('roadmapnode').select('*').eq('learningpath_id', id).order('urutan'),
       supabase.from('materi').select('*').eq('roadmapnode_id', nodeId).order('urutan'),
@@ -93,7 +93,7 @@ export default function MateriPage() {
           ← Kembali ke Roadmap
         </button>
         <div style={{ fontSize: 12, color: 'var(--muted)', display: 'flex', alignItems: 'center', gap: 6 }}>
-          <span style={{ color: 'var(--cyan)' }}>{lp?.Nama_Learning_Path}</span>
+          <span style={{ color: 'var(--cyan)' }}>{lp?.['Nama Learning Path']}</span>
           <span>-</span>
           <span style={{ color: 'var(--cyan)' }}>{node?.judul}</span>
         </div>

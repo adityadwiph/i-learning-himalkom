@@ -28,6 +28,7 @@ const KOM_COLOR: Record<string,string> = {
 export default function EksplorasiPage() {
   const router = useRouter()
   const [profile, setProfile] = useState<Profile|null>(null)
+  const [role,    setRole]    = useState('')
   const [nim,     setNim]     = useState('')
   const [list,    setList]    = useState<Komunitas[]>([])
   const [joined,  setJoined]  = useState<string[]>([])
@@ -47,10 +48,11 @@ export default function EksplorasiPage() {
       supabase.from('komunitas_member').select('id_komunitas').eq('id_user', user.id),
     ])
     setProfile(prof)
+    setRole(prof?.role || '')
+    setNim(prof?.nim || '')
     setList(kom || [])
     setJoined((mem||[]).map((m:{ id_komunitas:string })=>m.id_komunitas))
 
-    // Stats real dari database
     const [{ count: cMember }, { count: cPeminatan }, { count: cMateri }] = await Promise.all([
       supabase.from('profiles').select('*', { count: 'exact', head: true }),
       supabase.from('learningpath').select('*', { count: 'exact', head: true }),
@@ -73,7 +75,7 @@ export default function EksplorasiPage() {
 
   return (
     <div style={{ minHeight:'100vh', background:'var(--bg)' }}>
-      <Navbar username={profile?.username || ''} nim={profile?.nim || ''} />
+      <Navbar username={profile?.username || ''} nim={nim} role={role} />
 
       <main style={{ maxWidth:1080, margin:'0 auto', padding:'52px 24px 80px' }}>
 
