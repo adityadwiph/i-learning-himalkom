@@ -13,6 +13,9 @@ interface Materi   {
   resources?: { title: string; url: string }[]
 }
 
+type NodeStatus = 'selesai' | 'aktif' | 'terkunci'
+interface RNode extends Node { status: NodeStatus }
+
 type Tab = 'content' | 'video' | 'resources'
 
 function normalizeResources(value: unknown): { title: string; url: string }[] {
@@ -48,30 +51,60 @@ export default function MateriPage() {
   const [nim,          setNim]          = useState('')
   const [lp,           setLp]           = useState<LP | null>(null)
   const [node,         setNode]         = useState<Node | null>(null)
-  const [allNodes,     setAllNodes]     = useState<Node[]>([])
+  const [allNodes,     setAllNodes]     = useState<RNode[]>([])
   const [materiList,   setMateriList]   = useState<Materi[]>([])
   const [activeMateri, setActiveMateri] = useState<Materi | null>(null)
   const [tab,          setTab]          = useState<Tab>('content')
   const [loading,      setLoading]      = useState(true)
+  const [nodeStatus,   setNodeStatus]   = useState<NodeStatus | null>(null)
+  const [userId,       setUserId]       = useState('')
+  const [marking,      setMarking]      = useState<string | null>(null)
 
   const load = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { router.push('/login'); return }
+    setUserId(user.id)
 
-    const [{ data: prof }, { data: mhs }, { data: lpd }, { data: nd }, { data: allNd }, { data: mat }] = await Promise.all([
+    const [{ data: prof }, { data: mhs }, { data: lpd }, { data: nd }, { data: allNd }, { data: mat }, { data: prog }] = await Promise.all([
       supabase.from('profiles').select('username').eq('id', user.id).single(),
       supabase.from('Mahasiswa').select('NIM').eq('id', user.id).single(),
       supabase.from('learningpath').select('*').eq('id', id).single(),
       supabase.from('roadmapnode').select('*').eq('id', nodeId).single(),
       supabase.from('roadmapnode').select('*').eq('learningpath_id', id).order('urutan'),
       supabase.from('materi').select('*').eq('roadmapnode_id', nodeId).order('urutan'),
+      supabase.from('progress').select('roadmapnode_id,status').eq('user_id', user.id),
     ])
 
     setProfile(prof)
     setNim(mhs?.NIM || '')
     setLp(lpd)
     setNode(nd)
-    setAllNodes(allNd || [])
+
+    // Tentukan status setiap node
+    const doneSet = new Set((prog || []).filter((p: { status: string }) => p.status === 'selesai').map((p: { roadmapnode_id: string }) => p.roadmapnode_id))
+    let foundActive = false
+    const enrichedNodes: RNode[] = (allNd || []).map((n: Node) => {
+      if (doneSet.has(n.id)) return { ...n, status: 'selesai' as NodeStatus }
+      if (!foundActive) { foundActive = true; return { ...n, status: 'aktif' as NodeStatus } }
+      return { ...n, status: 'terkunci' as NodeStatus }
+    })
+
+    // Tentukan status node yang diakses
+    const currentNode = enrichedNodes.find(n => n.id === nodeId)
+    const currentStatus = currentNode?.status || 'terkunci'
+
+    // Jika node terkunci, redirect
+    if (currentStatus === 'terkunci') {
+      router.push(`/learning-path/${id}`)
+      return
+    }
+
+    setNodeStatus(currentStatus)
+
+    // Filter nodes untuk sidebar: hanya yang selesai atau aktif
+    const accessibleNodes = enrichedNodes.filter(n => n.status === 'selesai' || n.status === 'aktif')
+    setAllNodes(accessibleNodes)
+
     const normalizedMat = (mat || []).map((item: any) => ({ ...item, resources: normalizeResources(item.resources) }))
     setMateriList(normalizedMat)
     if (normalizedMat.length > 0) setActiveMateri(normalizedMat[0])
@@ -79,6 +112,19 @@ export default function MateriPage() {
   }, [id, nodeId, router])
 
   useEffect(() => { load() }, [load])
+
+  async function markDone() {
+    if (!nodeId || !userId) return
+    setMarking(nodeId)
+    await supabase.from('progress').upsert({
+      user_id: userId,
+      roadmapnode_id: nodeId,
+      status: 'selesai',
+      updated_at: new Date().toISOString(),
+    })
+    setMarking(null)
+    router.push(`/learning-path/${id}`)
+  }
 
   // Group materi by section_title
   const sections: { title: string; items: Materi[] }[] = []
@@ -343,6 +389,7 @@ export default function MateriPage() {
                   const idx = materiList.findIndex(m => m.id === activeMateri.id)
                   const prev = materiList[idx - 1]
                   const next = materiList[idx + 1]
+                  const isLast = idx === materiList.length - 1
                   return (
                     <>
                       <div>
@@ -357,7 +404,16 @@ export default function MateriPage() {
                         )}
                       </div>
                       <div>
-                        {next && (
+                        {isLast ? (
+                          <button
+                            onClick={() => markDone()}
+                            disabled={marking === nodeId}
+                            className="btn-primary"
+                            style={{ fontSize: 12 }}
+                          >
+                            {marking === nodeId ? 'Menyimpan...' : '✓ Tandai Selesai'}
+                          </button>
+                        ) : next ? (
                           <button
                             onClick={() => { setActiveMateri(next); setTab('content') }}
                             className="btn-primary"
@@ -365,7 +421,7 @@ export default function MateriPage() {
                           >
                             {next.judul} →
                           </button>
-                        )}
+                        ) : null}
                       </div>
                     </>
                   )

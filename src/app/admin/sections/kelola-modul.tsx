@@ -62,7 +62,10 @@ export default function KelolModulPage() {
 
   const filteredNodes  = selLP   ? nodes.filter(n => n.learningpath_id === selLP) : nodes
   const filteredMateri = selNode ? materiList.filter(m => m.roadmapnode_id === selNode)
-                                 : selLP ? materiList.filter(m => nodes.find(n => n.learningpath_id === selLP && n.id === m.roadmapnode_id))
+                                 : selLP ? materiList.filter(m => {
+                                   const node = nodes.find(n => n.learningpath_id === selLP && n.id === m.roadmapnode_id)
+                                   return !!node
+                                 })
                                          : materiList
 
   const lpName   = (id: string) => lps.find(l => l.id === id)?.['Nama Learning Path'] || '—'
@@ -104,7 +107,7 @@ export default function KelolModulPage() {
       {/* Tabs */}
       <div style={{ display: 'flex', gap: 0, borderBottom: '1px solid rgba(255,255,255,.06)', marginBottom: 20 }}>
         {(['node', 'materi'] as const).map(t => (
-          <button key={t} onClick={() => setTab(t)} style={{
+          <button key={t} onClick={() => { setTab(t); if(t === 'materi' && !selLP) setSelNode('') }} style={{
             padding: '8px 20px', fontSize: 13, fontWeight: tab === t ? 600 : 400,
             background: 'transparent', border: 'none', cursor: 'pointer',
             color: tab === t ? 'var(--cyan)' : 'var(--muted)',
@@ -116,20 +119,24 @@ export default function KelolModulPage() {
 
       {/* Filters */}
       <div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
-        <select value={selLP} onChange={e => { setSelLP(e.target.value); setSelNode('') }}
+        <select value={selLP} onChange={e => { 
+          const val = e.target.value
+          setSelLP(val)
+          setSelNode('')
+          setTab('materi')
+        }}
           style={{ ...inputStyle, width: 'auto', marginBottom: 0, minWidth: 200 }}>
           <option value="">Semua Learning Path</option>
           {lps.map(l => <option key={l.id} value={l.id}>{l['Nama Learning Path']}</option>)}
         </select>
-        {tab === 'materi' && (
-          <select value={selNode} onChange={e => setSelNode(e.target.value)}
-            style={{ ...inputStyle, width: 'auto', marginBottom: 0, minWidth: 200 }}>
-            <option value="">Semua Modul</option>
-            {(selLP ? nodes.filter(n => n.learningpath_id === selLP) : nodes).map(n => (
-              <option key={n.id} value={n.id}>Modul {n.urutan} — {n.judul}</option>
-            ))}
-          </select>
-        )}
+        <select value={selNode} onChange={e => setSelNode(e.target.value)}
+          disabled={tab === 'node'}
+          style={{ ...inputStyle, width: 'auto', marginBottom: 0, minWidth: 200, opacity: tab === 'node' ? 0.5 : 1, cursor: tab === 'node' ? 'not-allowed' : 'pointer' }}>
+          <option value="">Semua Modul</option>
+          {(selLP ? nodes.filter(n => n.learningpath_id === selLP) : nodes).map(n => (
+            <option key={n.id} value={n.id}>Modul {n.urutan} — {n.judul}</option>
+          ))}
+        </select>
       </div>
 
       {/* Table */}
@@ -155,7 +162,7 @@ export default function KelolModulPage() {
               </tr>
             )}
           </thead>
-          <tbody>
+          <tbody key={`${tab}-${selLP}-${selNode}`}>
             {tab === 'node' ? filteredNodes.map(n => (
               <tr key={n.id} style={{ transition: 'background .1s' }}
                 onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,.02)'}
