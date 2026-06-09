@@ -35,8 +35,9 @@ export default function LoginPage() {
     e.preventDefault()
     setLoginErr(''); setLoginLoading(true)
     const { error } = await supabase.auth.signInWithPassword({ email, password: pass })
-    setLoginLoading(false)
-    if (error) { setLoginErr('Email atau password salah.'); return }
+    if (error) { setLoginErr('Email atau password salah.'); setLoginLoading(false); return }
+    // Ensure redirect happens after auth completes
+    await new Promise(resolve => setTimeout(resolve, 100))
     router.push('/dashboard')
   }
 
