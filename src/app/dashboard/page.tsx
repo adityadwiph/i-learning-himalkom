@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { supabase } from '@/lib/supabase/client'
 import Navbar from '@/components/ui/navbar'
 
-interface Profile    { username: string; nim: string }
+interface Profile    { username: string; nim: string; role: string }
 interface EnrolledLP { id: string; name: string; done: number; total: number; komunitas: string }
 interface RecentAct  { judul: string; status: string; updated_at: string }
 interface JoinedKom  { id: string; nama: string }
@@ -43,7 +43,7 @@ export default function DashboardPage() {
     if (!user) { router.push('/login'); return }
 
     const [{ data: prof }, { data: ulp }, { data: prog }, { data: km }] = await Promise.all([
-      supabase.from('profiles').select('username, nim').eq('id', user.id).single(),
+      supabase.from('profiles').select('username, nim, role').eq('id', user.id).single(),
       supabase.from('user_learningpath')
         .select('LearningPath_id, learningpath(id, "Nama Learning Path")')
         .eq('user_id', user.id),
@@ -57,7 +57,6 @@ export default function DashboardPage() {
         .eq('id_user', user.id),
     ])
 
-    // Set profile dulu agar navbar langsung dapat data
     setProfile(prof)
 
     setRecent((prog || []).map((p: any) => ({
@@ -122,10 +121,9 @@ export default function DashboardPage() {
 
   const pct = stats.total > 0 ? Math.round((stats.done / stats.total) * 100) : 0
 
-  // Loading state — tetap kirim profile ke Navbar
   if (loading) return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
-      <Navbar username={profile?.username || ''} nim={profile?.nim || ''} />
+      <Navbar username={profile?.username || ''} nim={profile?.nim || ''} role={profile?.role || ''} />
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh', color: 'var(--muted)', fontSize: 14 }}>
         Memuat dashboard...
       </div>
@@ -134,7 +132,7 @@ export default function DashboardPage() {
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
-      <Navbar username={profile?.username || ''} nim={profile?.nim || ''} />
+      <Navbar username={profile?.username || ''} nim={profile?.nim || ''} role={profile?.role || ''} />
 
       <main style={{ maxWidth: 1000, margin: '0 auto', padding: '44px 24px 80px' }}>
 
@@ -144,7 +142,7 @@ export default function DashboardPage() {
             {new Date().toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
           </div>
           <h1 style={{ fontFamily: 'var(--font-d)', fontWeight: 900, fontSize: 'clamp(22px,3.5vw,36px)', color: '#fff', marginBottom: 6 }}>
-            Halo, <span style={{ color: 'var(--cyan)' }}>{profile?.username}!</span> 
+            Halo, <span style={{ color: 'var(--cyan)' }}>{profile?.username}!</span>
           </h1>
           <p style={{ fontSize: 13, color: 'var(--muted)' }}>
             {enrolled.length === 0

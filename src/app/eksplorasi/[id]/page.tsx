@@ -7,7 +7,7 @@ import Navbar from '@/components/ui/navbar'
 
 interface LP       { id: string; 'Nama Learning Path': string; deskripsi: string }
 interface Komunitas{ id: string; nama_komunitas: string }
-interface Profile  { username: string }
+interface Profile  { username: string; role: string }
 
 const KOM_ICON: Record<string, React.ReactNode> = {
   CSI: <img src="/images/csi.png" alt="csi Logo" style={{ width: '24px', height: '24px' }} />,
@@ -37,7 +37,7 @@ export default function SpesialisasiPage() {
     if (!user) { router.push('/login'); return }
 
     const [{ data:prof },{ data:k },{ data:klp }] = await Promise.all([
-      supabase.from('profiles').select('username').eq('id',user.id).single(),
+      supabase.from('profiles').select('username,role').eq('id',user.id).single(),
       supabase.from('komunitas').select('id,nama_komunitas').eq('id',id).single(),
       supabase.from('komunitas_learningpath')
         .select('Learning_Path_id, learningpath(id, deskripsi, "Nama Learning Path")')
@@ -79,7 +79,7 @@ export default function SpesialisasiPage() {
 
   if (loading) return (
     <div style={{ minHeight:'100vh', background:'var(--bg)' }}>
-      <Navbar username={profile?.username}/>
+      <Navbar username={profile?.username} role={profile?.role || ''}/>
       <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:'60vh', color:'var(--muted)' }}>
         Memuat...
       </div>
@@ -88,7 +88,7 @@ export default function SpesialisasiPage() {
 
   return (
     <div style={{ minHeight:'100vh', background:'var(--bg)' }}>
-      <Navbar username={profile?.username} nim={nim}/>
+      <Navbar username={profile?.username} nim={nim} role={profile?.role || ''}/>
 
       <main style={{ maxWidth:960, margin:'0 auto', padding:'44px 24px 80px' }}>
 

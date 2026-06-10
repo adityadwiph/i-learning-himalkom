@@ -6,7 +6,7 @@ import Navbar from '@/components/ui/navbar'
 
 interface LP      { id:string; 'Nama Learning Path':string; deskripsi:string }
 interface Node    { id:string; judul:string; urutan:number; learningpath_id:string }
-interface Profile { username:string }
+interface Profile { username:string; role:string; komunitas?: string } // Tambahkan komunitas di sini jika ada
 
 type NodeStatus = 'selesai'|'aktif'|'terkunci'
 interface RNode extends Node { status: NodeStatus }
@@ -34,7 +34,6 @@ function NodeFAB({
 
   useEffect(() => {
     if (node) {
-      // tiny delay so the CSS transition fires after mount
       const t = setTimeout(() => setVisible(true), 10)
       return () => clearTimeout(t)
     } else {
@@ -83,7 +82,7 @@ function NodeFAB({
           transition: 'transform .28s cubic-bezier(.16,1,.3,1), opacity .22s ease',
         }}
       >
-        {/* Top row: status badge + close */}
+        {/* Top row */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
           <div style={{
             flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -123,12 +122,11 @@ function NodeFAB({
           </div>
           {['Modul', 'Video'].map(item => (
             <div key={item} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-              <span style={{ fontSize: 13, color: 'var(--muted)', paddingLeft: 2 }}>{item}</span>
+              <span style={{ fontSize: 13, color: 'var(--muted)' }}>{item}</span>
             </div>
           ))}
         </div>
 
-        {/* Description */}
         <p style={{ fontSize: 13, color: 'var(--muted)', lineHeight: 1.7, marginBottom: 18 }}>
           Selesaikan modul ini untuk membuka materi berikutnya. Klik tombol di bawah setelah kamu mempelajari materinya.
         </p>
@@ -174,32 +172,29 @@ function NodeFAB({
 export default function LearningPathPage() {
   const { id }   = useParams<{ id:string }>()
   const router   = useRouter()
-  const [profile,    setProfile]    = useState<Profile|null>(null)
-  const [nim,        setNim]        = useState('')
-  const [lp,         setLp]         = useState<LP|null>(null)
-  const [nodes,      setNodes]      = useState<RNode[]>([])
-  const [userId,     setUserId]     = useState('')
-  const [openNode,   setOpenNode]   = useState<RNode|null>(null)  // now stores the full node
-  const [marking,    setMarking]    = useState<string|null>(null)
-  const [loading,    setLoading]    = useState(true)
-  const [komunitasId,setKomunitasId] = useState<string|null>(null)
+  const [profile,  setProfile]  = useState<Profile|null>(null)
+  const [nim,      setNim]      = useState('')
+  const [lp,       setLp]       = useState<LP|null>(null)
+  const [nodes,    setNodes]    = useState<RNode[]>([])
+  const [userId,   setUserId]   = useState('')
+  const [openNode, setOpenNode] = useState<RNode|null>(null)
+  const [marking,  setMarking]  = useState<string|null>(null)
+  const [loading,  setLoading]  = useState(true)
 
   const load = useCallback(async () => {
     const { data:{ user } } = await supabase.auth.getUser()
     if (!user) { router.push('/login'); return }
     setUserId(user.id)
 
+    // Pastikan mengambil kolom 'komunitas' dari tabel profiles (sesuaikan nama kolomnya jika berbeda)
     const [{ data:prof },{ data:mhs },{ data:lpd },{ data:rawNodes },{ data:prog }] = await Promise.all([
-      supabase.from('profiles').select('username').eq('id',user.id).single(),
-      supabase.from('Mahasiswa').select('NIM').eq('id',user.id).single(),
-      supabase.from('learningpath').select('*').eq('id',id).single(),
-      supabase.from('roadmapnode').select('*').eq('learningpath_id',id).order('urutan'),
-      supabase.from('progress').select('roadmapnode_id,status').eq('user_id',user.id),
+      supabase.from('profiles').select('username, role, komunitas').eq('id', user.id).single(),
+      supabase.from('Mahasiswa').select('NIM').eq('id', user.id).single(),
+      supabase.from('learningpath').select('*').eq('id', id).single(),
+      supabase.from('roadmapnode').select('*').eq('learningpath_id', id).order('urutan'),
+      supabase.from('progress').select('roadmapnode_id, status').eq('user_id', user.id),
     ])
     setProfile(prof); setNim(mhs?.NIM||''); setLp(lpd)
-
-    const { data: komlp } = await supabase.from('komunitas_learningpath').select('komunitas_id').eq('Learning_Path_id', id).limit(1)
-    setKomunitasId((komlp && komlp[0]?.komunitas_id) || null)
 
     const doneSet = new Set((prog||[]).filter((p:{ status:string })=>p.status==='selesai').map((p:{ roadmapnode_id:string })=>p.roadmapnode_id))
     let foundActive = false
@@ -225,31 +220,43 @@ export default function LearningPathPage() {
     setOpenNode(null)
   }
 
+  // Handler navigasi balik ke spesialisasi komunitas
+  function handleBackToSpesialisasi() {
+    if (profile?.komunitas) {
+      // Mengarahkan ke halaman spesialisasi komunitas, di-lowercase agar URL-friendly
+      const komunitasUrl = profile.komunitas.toLowerCase();
+      router.push(`/spesialisasi/${komunitasUrl}`);
+    } else {
+      // Fallback jika data komunitas tidak ditemukan/null
+      router.push('/dashboard'); 
+    }
+  }
+
   const done  = nodes.filter(n=>n.status==='selesai').length
   const total = nodes.length
   const pct   = total>0 ? Math.round((done/total)*100) : 0
 
   const chunkSize = 3
   const rows: RNode[][] = []
-  for (let i=0; i<nodes.length; i+=chunkSize) rows.push(nodes.slice(i, i+chunkSize))
+  for (let i=0; i<nodes.length; i+=chunkSize) rows.push(nodes.slice(i,i+chunkSize))
 
   if (loading) return (
     <div style={{ minHeight:'100vh', background:'var(--bg)' }}>
-      <Navbar username={profile?.username}/>
+      <Navbar username={profile?.username} role={profile?.role || ''}/>
       <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:'60vh', color:'var(--muted)' }}>Memuat roadmap...</div>
     </div>
   )
 
   return (
     <div style={{ minHeight:'100vh', background:'var(--bg)' }}>
-      <Navbar username={profile?.username} nim={nim}/>
+      <Navbar username={profile?.username} nim={nim} role={profile?.role || ''}/>
 
       <main style={{ maxWidth:960, margin:'0 auto', padding:'44px 24px 80px' }}>
 
-        {/* Back */}
-        <button
-          onClick={() => router.push(komunitasId ? `/eksplorasi/${komunitasId}` : '/eksplorasi')}
-          className="btn-ghost"
+        {/* Back Button yang sudah diarahkan ke spesialisasi komunitas */}
+        <button 
+          onClick={handleBackToSpesialisasi} 
+          className="btn-ghost" 
           style={{ fontSize:12, padding:'6px 14px', marginBottom:32 }}
         >
           ← Ganti Path

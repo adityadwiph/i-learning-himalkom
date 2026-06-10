@@ -4,7 +4,7 @@ import { useParams, useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase/client'
 import Navbar from '@/components/ui/navbar'
 
-interface Profile  { username: string }
+interface Profile  { username: string; role: string }
 interface Node     { id: string; judul: string; urutan: number; learningpath_id: string }
 interface LP       { id: string; 'Nama Learning Path': string }
 interface Materi   {
@@ -13,40 +13,15 @@ interface Materi   {
   resources?: { title: string; url: string }[]
 }
 
+type Tab        = 'content' | 'video' | 'resources'
 type NodeStatus = 'selesai' | 'aktif' | 'terkunci'
 interface RNode extends Node { status: NodeStatus }
-
-type Tab = 'content' | 'video' | 'resources'
-
-function normalizeResources(value: unknown): { title: string; url: string }[] {
-  if (!value) return []
-  if (Array.isArray(value)) return value.filter(r => r && typeof r === 'object').map(r => ({
-    title: String((r as any).title || ''),
-    url: String((r as any).url || ''),
-  }))
-  if (typeof value === 'string') {
-    try {
-      const parsed = JSON.parse(value)
-      return normalizeResources(parsed)
-    } catch {
-      return []
-    }
-  }
-  if (typeof value === 'object' && value !== null) {
-    const item = value as Record<string, any>
-    if ('title' in item || 'url' in item) {
-      return [{ title: String(item.title || ''), url: String(item.url || '') }]
-    }
-    const values = Object.values(item)
-    if (values.length > 0) return normalizeResources(values)
-  }
-  return []
-}
 
 export default function MateriPage() {
   const { id, nodeId } = useParams<{ id: string; nodeId: string }>()
   const router = useRouter()
 
+  const [userId,       setUserId]       = useState('')
   const [profile,      setProfile]      = useState<Profile | null>(null)
   const [nim,          setNim]          = useState('')
   const [lp,           setLp]           = useState<LP | null>(null)
@@ -56,9 +31,8 @@ export default function MateriPage() {
   const [activeMateri, setActiveMateri] = useState<Materi | null>(null)
   const [tab,          setTab]          = useState<Tab>('content')
   const [loading,      setLoading]      = useState(true)
-  const [nodeStatus,   setNodeStatus]   = useState<NodeStatus | null>(null)
-  const [userId,       setUserId]       = useState('')
-  const [marking,      setMarking]      = useState<string | null>(null)
+  const [marking,      setMarking]      = useState(false)
+  const [marked,       setMarked]       = useState(false)
 
   const load = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser()
@@ -66,9 +40,9 @@ export default function MateriPage() {
     setUserId(user.id)
 
     const [{ data: prof }, { data: mhs }, { data: lpd }, { data: nd }, { data: allNd }, { data: mat }, { data: prog }] = await Promise.all([
-      supabase.from('profiles').select('username').eq('id', user.id).single(),
+      supabase.from('profiles').select('username,role').eq('id', user.id).single(),
       supabase.from('Mahasiswa').select('NIM').eq('id', user.id).single(),
-      supabase.from('learningpath').select('*').eq('id', id).single(),
+      supabase.from('learningpath').select('id,"Nama Learning Path"').eq('id', id).single(),
       supabase.from('roadmapnode').select('*').eq('id', nodeId).single(),
       supabase.from('roadmapnode').select('*').eq('learningpath_id', id).order('urutan'),
       supabase.from('materi').select('*').eq('roadmapnode_id', nodeId).order('urutan'),
@@ -79,50 +53,42 @@ export default function MateriPage() {
     setNim(mhs?.NIM || '')
     setLp(lpd)
     setNode(nd)
+    setMateriList(mat || [])
+    if (mat && mat.length > 0) setActiveMateri(mat[0])
 
-    // Tentukan status setiap node
-    const doneSet = new Set((prog || []).filter((p: { status: string }) => p.status === 'selesai').map((p: { roadmapnode_id: string }) => p.roadmapnode_id))
+    // Compute node statuses
+    const doneSet = new Set((prog || []).filter((p: any) => p.status === 'selesai').map((p: any) => p.roadmapnode_id))
     let foundActive = false
-    const enrichedNodes: RNode[] = (allNd || []).map((n: Node) => {
+    const enriched: RNode[] = (allNd || []).map((n: Node) => {
       if (doneSet.has(n.id)) return { ...n, status: 'selesai' as NodeStatus }
       if (!foundActive) { foundActive = true; return { ...n, status: 'aktif' as NodeStatus } }
       return { ...n, status: 'terkunci' as NodeStatus }
     })
+    setAllNodes(enriched)
 
-    // Tentukan status node yang diakses
-    const currentNode = enrichedNodes.find(n => n.id === nodeId)
-    const currentStatus = currentNode?.status || 'terkunci'
-
-    // Jika node terkunci, redirect
-    if (currentStatus === 'terkunci') {
-      router.push(`/learning-path/${id}`)
-      return
-    }
-
-    setNodeStatus(currentStatus)
-
-    // Filter nodes untuk sidebar: hanya yang selesai atau aktif
-    const accessibleNodes = enrichedNodes.filter(n => n.status === 'selesai' || n.status === 'aktif')
-    setAllNodes(accessibleNodes)
-
-    const normalizedMat = (mat || []).map((item: any) => ({ ...item, resources: normalizeResources(item.resources) }))
-    setMateriList(normalizedMat)
-    if (normalizedMat.length > 0) setActiveMateri(normalizedMat[0])
+    // Check if current node is already done
+    setMarked(doneSet.has(nodeId))
     setLoading(false)
   }, [id, nodeId, router])
 
   useEffect(() => { load() }, [load])
 
+  // Check if current node is accessible
+  const currentNodeStatus = allNodes.find(n => n.id === nodeId)?.status
+
   async function markDone() {
-    if (!nodeId || !userId) return
-    setMarking(nodeId)
+    if (!userId) return
+    setMarking(true)
     await supabase.from('progress').upsert({
       user_id: userId,
       roadmapnode_id: nodeId,
       status: 'selesai',
       updated_at: new Date().toISOString(),
     })
-    setMarking(null)
+    setMarked(true)
+    setMarking(false)
+    await load()
+    // Navigate back to learning path
     router.push(`/learning-path/${id}`)
   }
 
@@ -142,16 +108,35 @@ export default function MateriPage() {
 
   if (loading) return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
-      <Navbar username={profile?.username} />
+      <Navbar username={profile?.username} role={profile?.role || ''} />
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh', color: 'var(--muted)' }}>
         Memuat materi...
       </div>
     </div>
   )
 
+  // Block access if node is locked
+  if (currentNodeStatus === 'terkunci') {
+    return (
+      <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
+        <Navbar username={profile?.username} nim={nim} role={profile?.role || ''} />
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '70vh', gap: 16 }}>
+          <div style={{ fontSize: 48 }}>🔒</div>
+          <div style={{ fontFamily: 'var(--font-d)', fontSize: 22, fontWeight: 900, color: '#fff' }}>Modul Terkunci</div>
+          <p style={{ fontSize: 13, color: 'var(--muted)', textAlign: 'center', maxWidth: 360, lineHeight: 1.7 }}>
+            Selesaikan modul sebelumnya terlebih dahulu untuk membuka modul ini.
+          </p>
+          <button onClick={() => router.push(`/learning-path/${id}`)} className="btn-primary" style={{ marginTop: 8 }}>
+            ← Kembali ke Roadmap
+          </button>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', flexDirection: 'column' }}>
-      <Navbar username={profile?.username} nim={nim} />
+      <Navbar username={profile?.username} nim={nim} role={profile?.role || ''} />
 
       {/* Breadcrumb bar */}
       <div style={{
@@ -194,7 +179,6 @@ export default function MateriPage() {
           {/* Sections + lessons */}
           {sections.map((sec, si) => (
             <div key={si}>
-              {/* Section header */}
               <div style={{
                 padding: '10px 18px 6px',
                 fontSize: 11, fontWeight: 600, color: 'var(--muted)',
@@ -204,8 +188,6 @@ export default function MateriPage() {
                 <span style={{ fontSize: 13 }}>⊞</span>
                 {sec.title}
               </div>
-
-              {/* Lesson items */}
               {sec.items.map(m => {
                 const isActive = activeMateri?.id === m.id
                 return (
@@ -230,23 +212,26 @@ export default function MateriPage() {
             </div>
           ))}
 
-          {/* Other nodes nav */}
-          {allNodes.length > 1 && (
+          {/* Other nodes nav — only show accessible ones */}
+          {allNodes.filter(n => n.id !== nodeId && n.status !== 'terkunci').length > 0 && (
             <div style={{ marginTop: 24, borderTop: '1px solid var(--border)', paddingTop: 16 }}>
               <div style={{ padding: '0 18px 8px', fontSize: 11, color: 'var(--muted)', letterSpacing: '0.5px' }}>
                 MODUL LAINNYA
               </div>
-              {allNodes.filter(n => n.id !== nodeId).map(n => (
+              {allNodes.filter(n => n.id !== nodeId && n.status !== 'terkunci').map(n => (
                 <div
                   key={n.id}
                   onClick={() => router.push(`/learning-path/${id}/materi/${n.id}`)}
                   style={{
                     padding: '8px 18px', fontSize: 12, cursor: 'pointer',
                     color: 'var(--muted)', transition: 'color .15s',
+                    display: 'flex', alignItems: 'center', gap: 6,
                   }}
                   onMouseEnter={e => e.currentTarget.style.color = 'var(--cyan)'}
                   onMouseLeave={e => e.currentTarget.style.color = 'var(--muted)'}
                 >
+                  {n.status === 'selesai' && <span style={{ fontSize: 10, color: 'var(--green)' }}>✓</span>}
+                  {n.status === 'aktif'   && <span style={{ fontSize: 10, color: 'var(--cyan)' }}>▶</span>}
                   Modul {n.urutan} — {n.judul}
                 </div>
               ))}
@@ -283,7 +268,6 @@ export default function MateriPage() {
                       borderBottom: tab === t ? '2px solid var(--cyan)' : '2px solid transparent',
                       marginBottom: -1, transition: 'color .15s',
                       fontFamily: 'var(--font-b)',
-                      textTransform: 'capitalize',
                     }}
                   >
                     {t === 'content' ? 'Content' : t === 'video' ? 'Video' : 'Resources'}
@@ -293,20 +277,13 @@ export default function MateriPage() {
 
               {/* Tab: Content */}
               {tab === 'content' && (
-                <div style={{
-                  fontSize: 14, color: 'var(--text)', lineHeight: 1.85,
-                  maxWidth: 720,
-                }}>
+                <div style={{ fontSize: 14, color: 'var(--text)', lineHeight: 1.85, maxWidth: 720 }}>
                   {activeMateri.konten ? (
                     activeMateri.konten.split('\n').map((para, i) => (
-                      para.trim() ? (
-                        <p key={i} style={{ marginBottom: 16 }}>{para}</p>
-                      ) : <br key={i} />
+                      para.trim() ? <p key={i} style={{ marginBottom: 16 }}>{para}</p> : <br key={i} />
                     ))
                   ) : (
-                    <div style={{ color: 'var(--muted)', fontStyle: 'italic' }}>
-                      Konten belum tersedia.
-                    </div>
+                    <div style={{ color: 'var(--muted)', fontStyle: 'italic' }}>Konten belum tersedia.</div>
                   )}
                 </div>
               )}
@@ -318,8 +295,7 @@ export default function MateriPage() {
                     <>
                       <div style={{
                         position: 'relative', width: '100%', paddingTop: '56.25%',
-                        background: '#000', borderRadius: 12, overflow: 'hidden',
-                        marginBottom: 20,
+                        background: '#000', borderRadius: 12, overflow: 'hidden', marginBottom: 20,
                       }}>
                         <iframe
                           src={activeMateri.video_url.includes('watch?v=')
@@ -329,24 +305,13 @@ export default function MateriPage() {
                           allowFullScreen
                         />
                       </div>
-                      <div style={{
-                        background: 'var(--bg3)', border: '1px solid var(--border)',
-                        borderRadius: 10, padding: '14px 18px',
-                      }}>
-                        <div style={{ fontSize: 10, letterSpacing: '1.5px', color: 'var(--muted)', marginBottom: 6 }}>
-                          TENTANG VIDEO INI
-                        </div>
-                        <div style={{ fontSize: 13, color: 'var(--text)' }}>
-                          Video ini menjelaskan tentang {activeMateri.judul}
-                        </div>
+                      <div style={{ background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 10, padding: '14px 18px' }}>
+                        <div style={{ fontSize: 10, letterSpacing: '1.5px', color: 'var(--muted)', marginBottom: 6 }}>TENTANG VIDEO INI</div>
+                        <div style={{ fontSize: 13, color: 'var(--text)' }}>Video ini menjelaskan tentang {activeMateri.judul}</div>
                       </div>
                     </>
                   ) : (
-                    <div style={{
-                      background: 'var(--bg3)', border: '1px solid var(--border)',
-                      borderRadius: 12, padding: '60px 40px', textAlign: 'center',
-                      color: 'var(--muted)',
-                    }}>
+                    <div style={{ background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 12, padding: '60px 40px', textAlign: 'center', color: 'var(--muted)' }}>
                       <div style={{ fontSize: 32, marginBottom: 12 }}>🎬</div>
                       <p>Video belum tersedia untuk materi ini.</p>
                     </div>
@@ -357,25 +322,26 @@ export default function MateriPage() {
               {/* Tab: Resources */}
               {tab === 'resources' && (
                 <div style={{ maxWidth: 720 }}>
-                  {Array.isArray(activeMateri.resources) && activeMateri.resources.length > 0 ? (
-                    <div style={{ display: 'grid', gap: 14 }}>
-                      {activeMateri.resources.map((res, i) => (
-                        <a key={i} href={res.url} target="_blank" rel="noreferrer" style={{
-                          display: 'block', padding: 18, borderRadius: 14,
+                  {activeMateri.resources && activeMateri.resources.length > 0 ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                      {activeMateri.resources.map((r, i) => (
+                        <a key={i} href={r.url} target="_blank" rel="noopener noreferrer" style={{
+                          display: 'flex', alignItems: 'center', gap: 12,
+                          padding: '14px 18px', borderRadius: 10, textDecoration: 'none',
                           background: 'var(--bg3)', border: '1px solid var(--border)',
-                          color: 'var(--text)', textDecoration: 'none', transition: 'background .15s',
-                        }}>
-                          <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 6 }}>{res.title || 'Resource'}</div>
-                          <div style={{ fontSize: 12, color: 'var(--muted)', wordBreak: 'break-all' }}>{res.url}</div>
+                          transition: 'border-color .15s',
+                        }}
+                          onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--cyan-30)'}
+                          onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border)'}
+                        >
+                          <span style={{ fontSize: 18 }}>📎</span>
+                          <span style={{ fontSize: 13, color: 'var(--cyan)', fontWeight: 500 }}>{r.title || r.url}</span>
+                          <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--muted)' }}>↗</span>
                         </a>
                       ))}
                     </div>
                   ) : (
-                    <div style={{
-                      background: 'var(--bg3)', border: '1px solid var(--border)',
-                      borderRadius: 12, padding: '60px 40px', textAlign: 'center',
-                      color: 'var(--muted)',
-                    }}>
+                    <div style={{ background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 12, padding: '60px 40px', textAlign: 'center', color: 'var(--muted)' }}>
                       <div style={{ fontSize: 32, marginBottom: 12 }}>📎</div>
                       <p>Belum ada resource untuk materi ini.</p>
                     </div>
@@ -389,44 +355,78 @@ export default function MateriPage() {
                   const idx = materiList.findIndex(m => m.id === activeMateri.id)
                   const prev = materiList[idx - 1]
                   const next = materiList[idx + 1]
-                  const isLast = idx === materiList.length - 1
                   return (
                     <>
                       <div>
                         {prev && (
-                          <button
-                            onClick={() => { setActiveMateri(prev); setTab('content') }}
-                            className="btn-ghost"
-                            style={{ fontSize: 12 }}
-                          >
+                          <button onClick={() => { setActiveMateri(prev); setTab('content') }} className="btn-ghost" style={{ fontSize: 12 }}>
                             ← {prev.judul}
                           </button>
                         )}
                       </div>
                       <div>
-                        {isLast ? (
-                          <button
-                            onClick={() => markDone()}
-                            disabled={marking === nodeId}
-                            className="btn-primary"
-                            style={{ fontSize: 12 }}
-                          >
-                            {marking === nodeId ? 'Menyimpan...' : '✓ Tandai Selesai'}
-                          </button>
-                        ) : next ? (
-                          <button
-                            onClick={() => { setActiveMateri(next); setTab('content') }}
-                            className="btn-primary"
-                            style={{ fontSize: 12 }}
-                          >
+                        {next && (
+                          <button onClick={() => { setActiveMateri(next); setTab('content') }} className="btn-primary" style={{ fontSize: 12 }}>
                             {next.judul} →
                           </button>
-                        ) : null}
+                        )}
                       </div>
                     </>
                   )
                 })()}
               </div>
+
+              {/* Tandai Selesai — only show for aktif node */}
+              {currentNodeStatus === 'aktif' && (
+                <div style={{
+                  maxWidth: 720, marginTop: 40,
+                  padding: '24px 28px', borderRadius: 14,
+                  background: 'rgba(0,200,255,.05)', border: '1px solid rgba(0,200,255,.2)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 20,
+                }}>
+                  <div>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: '#fff', marginBottom: 4 }}>
+                      Sudah selesai mempelajari modul ini?
+                    </div>
+                    <div style={{ fontSize: 12, color: 'var(--muted)' }}>
+                      {activeMateri?.id !== materiList[materiList.length - 1]?.id
+                        ? 'Selesaikan semua materi terlebih dahulu sebelum menandai modul ini selesai.'
+                        : 'Tandai selesai untuk membuka modul berikutnya.'}
+                    </div>
+                  </div>
+                  <button
+                    onClick={markDone}
+                    disabled={marking || activeMateri?.id !== materiList[materiList.length - 1]?.id}
+                    className="btn-primary"
+                    style={{
+                      padding: '11px 24px', fontSize: 13, whiteSpace: 'nowrap', flexShrink: 0,
+                      opacity: activeMateri?.id !== materiList[materiList.length - 1]?.id ? 0.4 : 1,
+                      cursor: activeMateri?.id !== materiList[materiList.length - 1]?.id ? 'not-allowed' : 'pointer',
+                    }}
+                  >
+                    {marking ? 'Menyimpan...' : '✓ Tandai Selesai'}
+                  </button>
+                </div>
+              )}
+
+              {/* Already done banner */}
+              {currentNodeStatus === 'selesai' && (
+                <div style={{
+                  maxWidth: 720, marginTop: 40,
+                  padding: '20px 24px', borderRadius: 14,
+                  background: 'rgba(0,230,118,.06)', border: '1px solid rgba(0,230,118,.2)',
+                  display: 'flex', alignItems: 'center', gap: 12,
+                }}>
+                  <span style={{ fontSize: 20 }}>✅</span>
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--green)' }}>Modul sudah diselesaikan</div>
+                    <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>Kamu telah menyelesaikan modul ini sebelumnya.</div>
+                  </div>
+                  <button onClick={() => router.push(`/learning-path/${id}`)} className="btn-ghost" style={{ fontSize: 12, marginLeft: 'auto', whiteSpace: 'nowrap' }}>
+                    ← Kembali ke Roadmap
+                  </button>
+                </div>
+              )}
             </>
           ) : (
             <div style={{ textAlign: 'center', padding: '80px 0', color: 'var(--muted)' }}>

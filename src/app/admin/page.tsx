@@ -7,46 +7,17 @@ import Navbar from '@/components/ui/navbar'
 interface Profile   { username: string; role: string }
 interface LP        { id: string; 'Nama Learning Path': string; deskripsi: string }
 interface Node      { id: string; judul: string; urutan: number; learningpath_id: string }
-interface Materi    { id: string; judul: string; konten: string; tipe: string; video_url: string; urutan: number; section_title: string; roadmapnode_id: string; resources?: { title: string; url: string }[] }
+interface Materi    { id: string; judul: string; konten: string; tipe: string; video_url: string; urutan: number; section_title: string; roadmapnode_id: string }
 interface Komunitas { id: string; nama_komunitas: string; deskripsi_komunitas: string }
 interface KomLP     { komunitas_id: string; Learning_Path_id: string }
 
 type View  = 'dashboard' | 'learning-paths' | 'nodes' | 'materi' | 'komunitas'
 type Modal = 'lp' | 'node' | 'materi' | 'komunitas' | 'relasi' | null
 
-const EMPTY_LP: LP = { id: '', 'Nama Learning Path': '', deskripsi: '' }
-const EMPTY_NODE: Node = { id: '', judul: '', urutan: 1, learningpath_id: '' }
-const EMPTY_MATERI: Materi = { id: '', judul: '', konten: '', tipe: 'text', video_url: '', urutan: 1, section_title: '', roadmapnode_id: '', resources: [] }
-const EMPTY_KOM: Komunitas = { id: '', nama_komunitas: '', deskripsi_komunitas: '' }
-
-function normalizeResources(value: unknown): { title: string; url: string }[] {
-  if (!value) return []
-  if (Array.isArray(value)) {
-    return value
-      .filter(item => item && typeof item === 'object')
-      .map(item => ({
-        title: String((item as any).title || ''),
-        url: String((item as any).url || ''),
-      }))
-  }
-  if (typeof value === 'string') {
-    try {
-      const parsed = JSON.parse(value)
-      return normalizeResources(parsed)
-    } catch {
-      return []
-    }
-  }
-  if (typeof value === 'object' && value !== null) {
-    const item = value as Record<string, any>
-    if ('title' in item || 'url' in item) {
-      return [{ title: String(item.title || ''), url: String(item.url || '') }]
-    }
-    const values = Object.values(item)
-    if (values.length > 0) return normalizeResources(values)
-  }
-  return []
-}
+const EMPTY_LP     = { id: '', 'Nama Learning Path': '', deskripsi: '' }
+const EMPTY_NODE   = { id: '', judul: '', urutan: 1, learningpath_id: '' }
+const EMPTY_MATERI = { id: '', judul: '', konten: '', tipe: 'text', video_url: '', urutan: 1, section_title: '', roadmapnode_id: '' }
+const EMPTY_KOM    = { id: '', nama_komunitas: '', deskripsi_komunitas: '' }
 
 export default function AdminPage() {
   const router = useRouter()
@@ -89,7 +60,7 @@ export default function AdminPage() {
     ])
     setLps(lpd || [])
     setNodes(nd || [])
-    setMateriList((mat || []).map((item: any) => ({ ...item, resources: normalizeResources(item.resources) })))
+    setMateriList(mat || [])
     setKomunitas(kom || [])
     setKomLPs(kl || [])
     setLoading(false)
@@ -122,16 +93,7 @@ export default function AdminPage() {
 
   async function saveMateri() {
     setSaving(true)
-    const p = {
-      judul: formMateri.judul,
-      konten: formMateri.konten,
-      tipe: formMateri.tipe,
-      video_url: formMateri.video_url,
-      urutan: formMateri.urutan,
-      section_title: formMateri.section_title,
-      roadmapnode_id: formMateri.roadmapnode_id,
-      resources: normalizeResources(formMateri.resources),
-    }
+    const p = { judul: formMateri.judul, konten: formMateri.konten, tipe: formMateri.tipe, video_url: formMateri.video_url, urutan: formMateri.urutan, section_title: formMateri.section_title, roadmapnode_id: formMateri.roadmapnode_id }
     formMateri.id ? await supabase.from('materi').update(p).eq('id', formMateri.id)
                   : await supabase.from('materi').insert(p)
     await load(); setModal(null); setFormMateri(EMPTY_MATERI); setSaving(false)
@@ -193,7 +155,14 @@ export default function AdminPage() {
   }
 
   const filteredNodes  = selLP   ? nodes.filter(n => n.learningpath_id === selLP) : nodes
-  const filteredMateri = selNode ? materiList.filter(m => m.roadmapnode_id === selNode) : materiList
+  const filteredMateri = (() => {
+    if (selNode) return materiList.filter(m => m.roadmapnode_id === selNode)
+    if (selLP) {
+      const lpNodeIds = new Set(nodes.filter(n => n.learningpath_id === selLP).map(n => n.id))
+      return materiList.filter(m => lpNodeIds.has(m.roadmapnode_id))
+    }
+    return materiList
+  })()
   const lpName         = (id: string) => lps.find(l => l.id === id)?.['Nama Learning Path'] || '-'
   const nodeName       = (id: string) => nodes.find(n => n.id === id)?.judul || '-'
   const getLPsForKom   = (komId: string) => komLPs.filter(kl => kl.komunitas_id === komId).map(kl => lps.find(l => l.id === kl.Learning_Path_id)).filter(Boolean) as LP[]
@@ -219,7 +188,6 @@ export default function AdminPage() {
     background: 'var(--bg)', border: '1px solid var(--border)',
     color: 'var(--text)', fontFamily: 'var(--font-b)', outline: 'none', marginBottom: 10,
   }
-  const formResources = normalizeResources(formMateri.resources)
   const labelStyle: React.CSSProperties = { fontSize: 11, color: 'var(--muted)', marginBottom: 4, display: 'block', letterSpacing: '0.5px' }
   const thStyle: React.CSSProperties    = { padding: '10px 14px', fontSize: 11, color: 'var(--muted)', textAlign: 'left', letterSpacing: '0.5px', borderBottom: '1px solid var(--border)', fontWeight: 600 }
   const tdStyle: React.CSSProperties    = { padding: '11px 14px', fontSize: 13, color: 'var(--text)', borderBottom: '1px solid var(--border)', verticalAlign: 'middle' }
@@ -245,17 +213,7 @@ export default function AdminPage() {
             </div>
           ))}
           <div style={{ borderTop: '1px solid var(--border)', marginTop: 16, paddingTop: 12 }}>
-            <div 
-              onClick={() => router.push('/dashboard')} 
-              style={{ 
-                ...sideItem('kembali' as any), 
-                color: 'var(--muted)',
-                background: 'var(--bg3)', /* Memberikan warna background permanen, bisa diganti misal 'rgba(255,255,255,0.05)' */
-                border: '1px solid var(--border)' /* Memberikan garis tepi permanen */
-              }}
-            >
-              ← Kembali
-            </div>
+            <div onClick={() => router.push('/dashboard')} style={{ ...sideItem('dashboard'), color: 'var(--muted)' }}>← Kembali</div>
           </div>
         </aside>
 
@@ -382,7 +340,7 @@ export default function AdminPage() {
               </div>
               <div style={{ background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                  <thead><tr><th style={thStyle}>No</th><th style={thStyle}>Judul</th><th style={thStyle}>Section</th><th style={thStyle}>Modul</th><th style={thStyle}>Resources</th><th style={thStyle}>Tipe</th><th style={thStyle}>Aksi</th></tr></thead>
+                  <thead><tr><th style={thStyle}>No</th><th style={thStyle}>Judul</th><th style={thStyle}>Section</th><th style={thStyle}>Modul</th><th style={thStyle}>Tipe</th><th style={thStyle}>Aksi</th></tr></thead>
                   <tbody>
                     {filteredMateri.map(m => (
                       <tr key={m.id}>
@@ -390,13 +348,12 @@ export default function AdminPage() {
                         <td style={tdStyle}><span style={{ fontWeight: 600 }}>{m.judul}</span></td>
                         <td style={{ ...tdStyle, color: 'var(--muted)' }}>{m.section_title || '-'}</td>
                         <td style={{ ...tdStyle, color: 'var(--muted)' }}>{nodeName(m.roadmapnode_id)}</td>
-                        <td style={{ ...tdStyle, color: 'var(--muted)' }}>{m.resources?.length ?? 0} link</td>
                         <td style={tdStyle}>
                           <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 20, background: m.tipe === 'video' ? 'rgba(251,191,36,.1)' : 'var(--cyan-10)', color: m.tipe === 'video' ? 'var(--amber)' : 'var(--cyan)', border: `1px solid ${m.tipe === 'video' ? 'rgba(251,191,36,.3)' : 'var(--cyan-20)'}` }}>{m.tipe}</span>
                         </td>
                         <td style={tdStyle}>
                           <div style={{ display: 'flex', gap: 8 }}>
-                            <button className="btn-ghost" style={{ fontSize: 11, padding: '4px 10px' }} onClick={() => { setFormMateri({ ...m, resources: normalizeResources(m.resources) }); setModal('materi') }}>Edit</button>
+                            <button className="btn-ghost" style={{ fontSize: 11, padding: '4px 10px' }} onClick={() => { setFormMateri(m); setModal('materi') }}>Edit</button>
                             <button style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, cursor: 'pointer', background: 'rgba(239,68,68,.1)', border: '1px solid rgba(239,68,68,.3)', color: '#f87171', opacity: deleting === m.id ? .5 : 1 }} onClick={() => deleteRow('materi', m.id)}>Hapus</button>
                           </div>
                         </td>
@@ -521,23 +478,6 @@ export default function AdminPage() {
                 <textarea style={{ ...inputStyle, height: 120, resize: 'vertical' }} value={formMateri.konten} onChange={e => setFormMateri(p => ({ ...p, konten: e.target.value }))} placeholder="Isi materi / penjelasan..." />
                 <label style={labelStyle}>VIDEO URL (opsional)</label>
                 <input style={inputStyle} value={formMateri.video_url} onChange={e => setFormMateri(p => ({ ...p, video_url: e.target.value }))} placeholder="https://www.youtube.com/watch?v=..." />
-                <label style={labelStyle}>RESOURCES</label>
-                {formResources.map((res, idx) => (
-                  <div key={idx} style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 8, marginBottom: 10 }}>
-                    <div>
-                      <input style={inputStyle} value={res.title} placeholder="Judul resource" onChange={e => setFormMateri(p => ({ ...p, resources: normalizeResources((p.resources || []).map((item, i) => i === idx ? { ...item, title: e.target.value } : item)) }))} />
-                      <input style={inputStyle} value={res.url} placeholder="URL resource" onChange={e => setFormMateri(p => ({ ...p, resources: normalizeResources((p.resources || []).map((item, i) => i === idx ? { ...item, url: e.target.value } : item)) }))} />
-                    </div>
-                    <button onClick={() => setFormMateri(p => ({ ...p, resources: normalizeResources((p.resources || []).filter((_, i) => i !== idx)) }))}
-                      style={{ padding: '9px 12px', borderRadius: 8, background: 'rgba(239,68,68,.1)', border: '1px solid rgba(239,68,68,.25)', color: '#f87171', cursor: 'pointer', fontSize: 12, alignSelf: 'start' }}>
-                      Hapus
-                    </button>
-                  </div>
-                ))}
-                <button onClick={() => setFormMateri(p => ({ ...p, resources: normalizeResources([ ...(p.resources || []), { title: '', url: '' } ]) }))}
-                  style={{ marginBottom: 16, padding: '10px 14px', borderRadius: 8, background: 'rgba(0,200,255,.08)', border: '1px solid rgba(0,200,255,.2)', color: 'var(--cyan)', cursor: 'pointer', fontSize: 12, fontWeight: 700 }}>
-                  + Tambah Resource
-                </button>
                 <label style={labelStyle}>URUTAN</label>
                 <input style={inputStyle} type="number" min={1} value={formMateri.urutan} onChange={e => setFormMateri(p => ({ ...p, urutan: parseInt(e.target.value) || 1 }))} />
                 <div style={{ display: 'flex', gap: 10, marginTop: 8 }}>
